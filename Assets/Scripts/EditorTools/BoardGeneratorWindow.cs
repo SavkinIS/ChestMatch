@@ -20,16 +20,14 @@ namespace Shashki.Editor
     {
         // Поддерживаемые размеры доски (6x6 или 8x8)
         private static readonly int[] _presetSizes = new[] { 6, 8 };
+        [SerializeField] private BoardCell _cellPrefab;
+        
         private int _sizeIndex = 1; // По умолчанию 8x8
 
         // Настройки доски
         private float _cellSize = 1f;          // Размер клетки
         private float _spacing = 0f;           // Расстояние между клетками
         private bool _centerAtOrigin = true;   // Центрировать ли доску в (0,0,0)
-
-        // Настройки коллайдеров
-        private bool _createBoxColliders = true;   // Добавить BoxCollider для кликов
-        private bool _removeMeshColliders = true;  // Удалить MeshCollider у Quad
 
         // Настройки паттерна
         private bool _darkSquaresOnly = false;     // Создавать только тёмные клетки
@@ -65,6 +63,7 @@ namespace Shashki.Editor
                 _cellSize = EditorGUILayout.FloatField("Размер клетки", Mathf.Max(0.01f, _cellSize));
                 _spacing = EditorGUILayout.FloatField("Расстояние между клетками", Mathf.Max(0f, _spacing));
                 _centerAtOrigin = EditorGUILayout.ToggleLeft("Центрировать доску в (0,0,0)", _centerAtOrigin);
+                _cellPrefab = (BoardCell)EditorGUILayout.ObjectField("Префаб клетки", _cellPrefab, typeof(BoardCell), false);
             }
 
             // Цвета клеток
@@ -81,12 +80,7 @@ namespace Shashki.Editor
             // Коллайдеры
             EditorGUILayout.Space(6);
             EditorGUILayout.LabelField("Коллайдеры", EditorStyles.boldLabel);
-            using (new EditorGUI.IndentLevelScope())
-            {
-                _createBoxColliders = EditorGUILayout.ToggleLeft("Добавить BoxCollider", _createBoxColliders);
-                _removeMeshColliders = EditorGUILayout.ToggleLeft("Удалить MeshCollider у Quad", _removeMeshColliders);
-            }
-
+            
             // Имя объекта-родителя
             EditorGUILayout.Space(6);
             EditorGUILayout.LabelField("Вывод", EditorStyles.boldLabel);
@@ -175,7 +169,7 @@ namespace Shashki.Editor
                         }
 
                         // Создание Quad клетки
-                        var cell = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                        var cell = Instantiate(_cellPrefab, root.transform);
                         Undo.RegisterCreatedObjectUndo(cell, "Создать клетку");
                         cell.name = $"Cell_{r}_{c}";
                         cell.transform.SetParent(parent.transform);
@@ -185,30 +179,12 @@ namespace Shashki.Editor
                         cell.transform.localPosition = pos;
                         cell.transform.localRotation = Quaternion.identity;
                         cell.transform.localScale = new Vector3(_cellSize, _cellSize, 1f);
-
-                        // Применение материала (светлый/тёмный)
-                        var mr = cell.GetComponent<MeshRenderer>();
-                        mr.sharedMaterial = (_checkerPattern && isDark) ? darkMat : lightMat;
-
-                        // Настройка коллайдеров
-                        if (_removeMeshColliders)
-                        {
-                            var meshCol = cell.GetComponent<MeshCollider>();
-                            if (meshCol) Object.DestroyImmediate(meshCol);
-                        }
-                        if (_createBoxColliders)
-                        {
-                            var bc = cell.AddComponent<BoxCollider>();
-                            bc.size = new Vector3(1f, 0.01f, 1f); // тонкий по Y, Quad лежит в XZ
-                            bc.center = Vector3.zero;
-                        }
-
-                        // Добавление метаинформации
-                        var boardCell = cell.AddComponent<BoardCell>();
-                        boardCell.SetData(r, c, isDark);
+                        cell.SetColor((_checkerPattern && isDark) ? darkMat : lightMat);
+                        
+                        cell.SetData(r, c, isDark);
                         
                         created++;
-                        cells.Add(boardCell);
+                        cells.Add(cell);
                         if (total > 0 && created % 8 == 0)
                         {
                             EditorUtility.DisplayProgressBar("Генерация доски",

@@ -1,10 +1,9 @@
-// PieceSpawner.cs
-// Генерация шашек для BoardRoot (работает и в редакторе, и в плеймоде)
-
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Shashki;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Shashki
 {
@@ -18,16 +17,15 @@ namespace Shashki
         [SerializeField] private BoardRoot _board;
         [SerializeField] private PieceView _piecePrefab;
         [SerializeField] private int _rowsWithPieces = 2;
-        [SerializeField] private Color _player1Color = Color.white;
-        [SerializeField] private Color _player2Color = Color.black;
-
-        private readonly List<PieceView> _pieces = new List<PieceView>();
+        [SerializeField] private Color _playerColor = Color.white;
+        [SerializeField] private Color _opponentColor = Color.black;
+        [SerializeField] private List<PieceView> _pieces = new List<PieceView>();
 
         public void SpawnPieces()
         {
             if (_piecePrefab == null || _board == null) return;
 
-            // удаляем старые
+            // Удаляем старые
             foreach (var piece in _pieces)
             {
 #if UNITY_EDITOR
@@ -48,15 +46,15 @@ namespace Shashki
                 if (cell == null) continue;
                 if (!cell.IsDark) continue;
 
-                // верхние ряды
+                // Верхние ряды
                 if (cell.Row < _rowsWithPieces)
                 {
-                    CreatePiece(cell, _player1Color, PieceOwner.Opponent);
+                    CreatePiece(cell, _opponentColor, PieceOwner.Opponent);
                 }
-                // нижние ряды
+                // Нижние ряды
                 else if (cell.Row >= rows - _rowsWithPieces)
                 {
-                    CreatePiece(cell, _player2Color, PieceOwner.Player);
+                    CreatePiece(cell, _playerColor, PieceOwner.Player);
                 }
             }
 
@@ -68,51 +66,70 @@ namespace Shashki
             var piece = Instantiate(_piecePrefab, cell.transform.position + Vector3.back * 0.01f,
                 Quaternion.identity, transform);
             piece.SetData(cell.Row, cell.Col, owner, color);
+            piece.name = $"Piece_{owner}";
             _pieces.Add(piece);
 
-            // регистрируем в карте BoardRoot
+            // Регистрируем в карте BoardRoot
             _board.RegisterPiece(piece, cell.Row, cell.Col);
         }
 
         /// <summary>
         /// Попробовать сходить шашкой в target-клетку.
+        /// Возвращает true, если ход выполнен, и out continueCapturing указывает, можно ли продолжить поедание.
         /// </summary>
-        public bool TryMove(PieceView piece, BoardCell target)
+        public bool TryMove(PieceView piece, BoardCell target, out bool continueCapturing)
         {
+            continueCapturing = false;
             var moves = piece.GetPossibleMoves(_board);
             foreach (var move in moves)
             {
                 if (move.To == target)
                 {
-                    // обновляем карту фигур
+                    // Обновляем карту фигур
                     _board.MovePieceInMap(piece, piece.Row, piece.Col, target.Row, target.Col);
 
-                    // перемещаем
+                    // Перемещаем и обновляем данные
+                    piece.SetDataAfterMove(target.Row, target.Col);
                     piece.transform.position = target.transform.position + Vector3.back * 0.01f;
-                    piece.SetData(target.Row, target.Col, piece.Owner,
-                        piece.GetComponentInChildren<Renderer>().material.color);
 
-                    // поедание
+                    // Обработка поедания
                     if (move.IsCapture && move.CapturedPiece != null)
                     {
                         _pieces.Remove(move.CapturedPiece);
                         _board.UnregisterPiece(move.CapturedPiece.Row, move.CapturedPiece.Col);
                         Destroy(move.CapturedPiece.gameObject);
+                        Debug.Log($"[PieceHolder] Съедена шашка на ({move.CapturedPiece.Row}, {move.CapturedPiece.Col})");
                     }
 
-                    // превращение в дамку
+                    // Проверяем дальнейшие поедания
+                    var newMoves = piece.GetPossibleMoves(_board);
+                    Debug.Log($"[PieceHolder] Новые ходы после поедания для ({piece.Row}, {piece.Col}): {newMoves.Count}, поедания: {newMoves.Count(m => m.IsCapture)}");
+                    if (move.IsCapture && newMoves.Exists(m => m.IsCapture))
+                    {
+                        continueCapturing = true;
+                        Debug.Log($"[PieceHolder] Возможные поедания: {string.Join(", ", newMoves.Where(m => m.IsCapture).Select(m => $"({m.To.Row}, {m.To.Col})"))}");
+                    }
+
+                    // Превращение в дамку
                     if (!piece.IsKing &&
                         ((piece.Owner == PieceOwner.Player && target.Row == 0) ||
                          (piece.Owner == PieceOwner.Opponent && target.Row == _board.Rows - 1)))
                     {
                         piece.PromoteToKing();
+                        continueCapturing = false; // Дамка завершает ход
                     }
 
                     return true;
                 }
             }
 
+            Debug.Log($"[PieceHolder] Невалидный ход для шашки ({piece.Row}, {piece.Col}) в ({target.Row}, {target.Col})");
             return false;
+        }
+
+        public Dictionary<(int row, int col), PieceView> GetPieces()
+        {
+            return _pieces.ToDictionary(p => (p.Row, p.Col), p => p);
         }
     }
 }

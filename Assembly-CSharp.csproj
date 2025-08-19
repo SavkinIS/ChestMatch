@@ -46,6 +46,7 @@
     <Analyzer Include="/Applications/Unity/Hub/Editor/6000.0.26f1/Unity.app/Contents/Tools/Unity.SourceGenerators/Unity.UIToolkit.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets/Scripts/GameController.cs" />
     <Compile Include="Assets/Scripts/PieceView.cs" />
     <Compile Include="Assets/Scripts/EditorTools/PieceSpawnerEditor.cs" />
     <Compile Include="Assets/Scripts/EditorTools/BoardGeneratorWindow.cs" />
