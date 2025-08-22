@@ -41,13 +41,12 @@ namespace Shashki
             {
                 if (highlight)
                 {
-                    var renderer = piece.GetComponent<SpriteRenderer>();
-                    if (renderer != null)
-                        renderer.color = new Color(0.5f, 1f, 0.5f, 1f); // Зелёный для выделения
+                    piece.SetHighlight();
                 }
                 else
                 {
-                    piece.SetData(piece.Row, piece.Col, piece.Owner, _currentPlayer == PieceOwner.Player ? Color.white : Color.black);
+                    piece.SetBaseColor();
+                    piece.SetData(piece.Row, piece.Col, piece.Owner);
                 }
             }
         }

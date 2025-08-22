@@ -105,8 +105,10 @@ MonoBehaviour:
   _col: 0
   _owner: 0
   _color: {r: 0, g: 0, b: 0, a: 1}
+  _colorHighlight: {r: 0.24559346, g: 0.9056604, b: 0.98039216, a: 1}
   _renderer: {fileID: 4534070084308850173}
   _isKing: 0
+  _ability: {fileID: 0}
 --- !u!58 &2688639898132773682
 CircleCollider2D:
   m_ObjectHideFlags: 0

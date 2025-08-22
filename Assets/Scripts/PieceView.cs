@@ -10,6 +10,7 @@ namespace Shashki
         [SerializeField] private int _col;
         [SerializeField] private PieceOwner _owner;
         [SerializeField] private Color _color;
+        [SerializeField] private Color _colorHighlight;
         [SerializeField] private SpriteRenderer _renderer;
         [SerializeField] private bool _isKing;
         [SerializeField] private AbilityBase _ability; // Добавлено: способность, привязанная к шашке
@@ -276,6 +277,22 @@ namespace Shashki
         {
             _row = targetRow;
             _col = targetCol;
+        }
+
+        public void SetHighlight()
+        {
+            if (_renderer != null)
+            {
+                _renderer.color = _colorHighlight;
+            }
+        }
+
+        public void SetBaseColor()
+        {
+            if (_renderer != null)
+            {
+                _renderer.color = _color;
+            }
         }
     }
 }
