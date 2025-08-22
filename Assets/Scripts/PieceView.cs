@@ -4,7 +4,7 @@ using UnityEngine.Serialization;
 
 namespace Shashki
 {
-    public class PieceView : MonoBehaviour
+     public class PieceView : MonoBehaviour
     {
         [SerializeField] private int _row;
         [SerializeField] private int _col;
@@ -12,11 +12,13 @@ namespace Shashki
         [SerializeField] private Color _color;
         [SerializeField] private SpriteRenderer _renderer;
         [SerializeField] private bool _isKing;
+        [SerializeField] private AbilityBase _ability; // Добавлено: способность, привязанная к шашке
         
         public int Row => _row;
         public int Col => _col;
         public PieceOwner Owner => _owner;
         public bool IsKing => _isKing;
+        public AbilityBase Ability => _ability;
 
         public void SetData(int row, int col, PieceOwner owner, Color color)
         {
@@ -34,11 +36,42 @@ namespace Shashki
             }
         }
         
+        public void SetData(int row, int col, PieceOwner owner)
+        {
+            _row = row;
+            _col = col;
+            _owner = owner;
+            
+            if (_renderer == null)
+                _renderer = GetComponent<SpriteRenderer>();
+            
+            if (_renderer != null)
+            {
+                _renderer.color = _color;
+            }
+        }
+        
         public void PromoteToKing()
         {
             _isKing = true;
             Debug.Log($"{name} стал дамкой!");
             // TODO: визуалка (например, смена спрайта или добавление короны)
+        }
+
+        public void SetAbility(AbilityBase ability)
+        {
+            _ability = ability;
+            Debug.Log($"[PieceView] Шашке ({_row}, {_col}) присвоена способность {ability?.DisplayName}");
+            // TODO: визуалка способности (например, иконка или цвет)
+        }
+
+        public void ExecuteAbility(BoardRoot board, PieceHolder pieceHolder)
+        {
+            if (_ability != null)
+            {
+                _ability.Execute(this, board, pieceHolder);
+                _ability = null; // Очищаем способность после выполнения
+            }
         }
 
         /// <summary>
@@ -143,7 +176,7 @@ namespace Shashki
                         bool canCapture = midCell != null && landCell != null && midPiece != null && midPiece.Owner != Owner &&
                                          board.GetPieceAt(landRow, landCol) == null && !captured.Contains(midPiece);
 
-                        // Запрещаем поедание шашек на границах доски (row 0, row 7, col 0, col 7 для 8x8)
+                        // Запрещаем поедание шашек на границах доски
                         if (canCapture && (midRow == 0 || midRow == board.Rows - 1 || midCol == 0 || midCol == board.Cols - 1))
                         {
                             Debug.Log($"[PieceView] Поедание шашки на ({midRow}, {midCol}) запрещено (на границе доски)");
@@ -179,10 +212,10 @@ namespace Shashki
                     {
                         for (int i = 1; i < board.Rows; i++)
                         {
-                            midRow = currentRow + dr * i;
-                            midCol = currentCol + dc * i;
-                            landRow = currentRow + dr * (i + 1);
-                            landCol = currentCol + dc * (i + 1);
+                             midRow = currentRow + dr * i;
+                             midCol = currentCol + dc * i;
+                             landRow = currentRow + dr * (i + 1);
+                             landCol = currentCol + dc * (i + 1);
 
                             if (!board.IsInside(midRow, midCol)) break;
                             if (!board.IsInside(landRow, landCol)) continue;

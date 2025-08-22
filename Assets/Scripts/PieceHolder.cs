@@ -119,6 +119,12 @@ namespace Shashki
                         continueCapturing = false; // Дамка завершает ход
                     }
 
+                    // Выполняем способность, если она есть и нет дальнейших поеданий
+                    if (!continueCapturing && piece.Ability != null)
+                    {
+                        piece.ExecuteAbility(_board, this);
+                    }
+
                     return true;
                 }
             }
