@@ -109,6 +109,7 @@ namespace Shashki
                                 Debug.Log($"[GameController] Ход сделан! Теперь ходит: {_currentPlayer}");
                                 _powerUpManager.ExecuteBombExplosion(_board, _pieceHolder); // Взрыв в конце хода
                                 DeselectPiece();
+                                OnPlayerChanged();
                             }
                             else
                             {
@@ -140,6 +141,30 @@ namespace Shashki
                     Debug.Log($"[GameController] Клик по {hitObject.name} игнорируется: не шашка или не принадлежит текущему игроку ({_currentPlayer})");
                 }
             }
+        }
+
+        private void OnPlayerChanged()
+        {
+           var pieces =  _pieceHolder.GetPieces().Values.Where(p => p.Owner == _currentPlayer).ToList();
+           bool hasMove = false;
+           
+           foreach (var p in pieces)
+           {
+               var moves = p.GetPossibleMoves(_board);
+               
+               if (moves.Any())
+                   hasMove = true;
+           }
+
+           if (!hasMove && pieces.Count > 0)
+           {
+               Debug.Log($"Оставшиеся шашки заблокированы {pieces.Count}");
+               for (var index = 0; index < pieces.Count; index++)
+               {
+                   var p = pieces[index];
+                   _pieceHolder.PieceDestory(p);
+               }
+           }
         }
 
         private void SelectPiece(PieceView piece)

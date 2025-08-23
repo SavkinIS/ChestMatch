@@ -19,7 +19,7 @@ namespace Shashki
             // Инициализация на старте сцены: 1 единица для каждой способности
             foreach (var ability in _availableAbilities)
             {
-                _abilityCounts[ability.Id] = 1; // 1 единица на старте
+                _abilityCounts[ability.Id] = 20; // 1 единица на старте
                 Debug.Log($"[PowerUpManager] Инициализирована способность {ability.DisplayName}: {_abilityCounts[ability.Id]}");
             }
             

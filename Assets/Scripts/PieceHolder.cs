@@ -95,9 +95,7 @@ namespace Shashki
                     // Обработка поедания
                     if (move.IsCapture && move.CapturedPiece != null)
                     {
-                        _pieces.Remove(move.CapturedPiece);
-                        _board.UnregisterPiece(move.CapturedPiece.Row, move.CapturedPiece.Col);
-                        Destroy(move.CapturedPiece.gameObject);
+                        PieceDestory(move.CapturedPiece);
                         Debug.Log($"[PieceHolder] Съедена шашка на ({move.CapturedPiece.Row}, {move.CapturedPiece.Col})");
                     }
 
@@ -131,6 +129,13 @@ namespace Shashki
 
             Debug.Log($"[PieceHolder] Невалидный ход для шашки ({piece.Row}, {piece.Col}) в ({target.Row}, {target.Col})");
             return false;
+        }
+
+        public void PieceDestory(PieceView piece)
+        {
+            _pieces.Remove(piece);
+            _board.UnregisterPiece(piece.Row, piece.Col);
+            Destroy(piece.gameObject);
         }
 
         public Dictionary<(int row, int col), PieceView> GetPieces()

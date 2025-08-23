@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Shashki
@@ -44,9 +45,7 @@ namespace Shashki
                     var targetPiece = board.GetPieceAt(targetRow, targetCol);
                     if (targetPiece != null)
                     {
-                        pieceHolder.GetPieces().Remove((targetRow, targetCol));
-                        board.UnregisterPiece(targetRow, targetCol);
-                        Object.Destroy(targetPiece.gameObject);
+                        pieceHolder.PieceDestory(targetPiece);
                         Debug.Log($"[BombKaikazeAbility] Уничтожена шашка на ({targetRow}, {targetCol})");
                     }
                 }
@@ -55,7 +54,6 @@ namespace Shashki
             // Уничтожаем саму шашку-бомбу
             pieceHolder.GetPieces().Remove((centerRow, centerCol));
             board.UnregisterPiece(centerRow, centerCol);
-            Object.Destroy(piece.gameObject);
             Debug.Log($"[BombKaikazeAbility] Шашка-бомба на ({centerRow}, {centerCol}) уничтожена");
         }
     }
