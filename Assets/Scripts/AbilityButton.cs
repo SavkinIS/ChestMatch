@@ -12,6 +12,7 @@ namespace Shashki
         [SerializeField] private TMPro.TextMeshProUGUI _countText; // UI текст для количества
 
         private Button _button;
+        private PieceOwner _currentOwner;
 
         private void Awake()
         {
@@ -23,10 +24,18 @@ namespace Shashki
         {
             UpdateButtonState();
             _powerUpManager.OnAbilityAdded += OnAbilityAdded;
+            _gameController.OnTurnEnd += OnTurnEnd;
         }
 
-        private void OnAbilityAdded(AbilityBase ability)
+        private void OnTurnEnd()
         {
+            _currentOwner = _gameController.Owner;
+            UpdateButtonState();
+        }
+
+        private void OnAbilityAdded(PieceOwner owner, AbilityBase ability)
+        {
+            _currentOwner = owner;
             if (ability.Id == _abilityType)
             {
                 UpdateButtonState();
@@ -48,7 +57,7 @@ namespace Shashki
 
         private void UpdateButtonState()
         {
-            int count = _powerUpManager.GetAbilityCount(_abilityType);
+            int count = _powerUpManager.GetAbilityCount(_currentOwner, _abilityType);
             _button.interactable = count > 0;
             if (_countText != null)
                 _countText.text = $"{_abilityType} {count}";

@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using UnityEngine;
 
@@ -14,6 +15,13 @@ namespace Shashki
         private PieceView _selectedPiece;
         private PieceOwner _currentPlayer = PieceOwner.Player;
         private bool _isSelectingAbilityPiece;
+        public PieceOwner Owner => _currentPlayer;
+        public event Action OnTurnEnd;
+
+        private void Awake()
+        {
+            OnTurnEnd += OnPlayerChanged;
+        }
 
         private void Update()
         {
@@ -105,11 +113,13 @@ namespace Shashki
 
                             if (!continueCapturing || !newMoves.Exists(m => m.IsCapture))
                             {
+                               
+                                _powerUpManager.ExecuteBombExplosion(_currentPlayer, _board, _pieceHolder); // Взрыв в конце хода
                                 _currentPlayer = (_currentPlayer == PieceOwner.Player) ? PieceOwner.Opponent : PieceOwner.Player;
                                 Debug.Log($"[GameController] Ход сделан! Теперь ходит: {_currentPlayer}");
-                                _powerUpManager.ExecuteBombExplosion(_board, _pieceHolder); // Взрыв в конце хода
                                 DeselectPiece();
-                                OnPlayerChanged();
+                                OnTurnEnd?.Invoke();
+                              
                             }
                             else
                             {
