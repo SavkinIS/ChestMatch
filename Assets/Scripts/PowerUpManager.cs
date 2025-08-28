@@ -7,28 +7,25 @@ namespace Shashki
 {
     public class PowerUpManager : MonoBehaviour
     {
-        [SerializeField] private List<AbilityBase> _availableAbilities; // Список доступных способностей
+        [SerializeField] private List<AbilityBase> _availableAbilities;
         [SerializeField] private GameController _gameController;
-        private Dictionary<PieceOwner, Dictionary<AbilityType, int>> _abilityCounts = new Dictionary<PieceOwner, Dictionary<AbilityType, int>>(); // Количество способностей для каждого игрока
-        private Dictionary<PieceOwner, AbilityBase> _selectedAbilities; // Текущие выбранные способности для каждого игрока
+        private Dictionary<PieceOwner, Dictionary<AbilityType, int>> _abilityCounts = new Dictionary<PieceOwner, Dictionary<AbilityType, int>>();
+        private Dictionary<PieceOwner, AbilityBase> _selectedAbilities;
         private Dictionary<AbilityType, AbilityBase> _availableAbilitiesDic;
-        private Dictionary<PieceOwner, PieceView> _bombPieces; // Бомбы для каждого игрока
-       
+        private Dictionary<PieceOwner, PieceView> _bombPieces;
 
-        public event Action<PieceOwner, AbilityBase> OnAbilityAdded; // Обновлено: добавлен PieceOwner
+        public event Action<PieceOwner, AbilityBase> OnAbilityAdded;
 
         private void Awake()
         {
             _gameController = FindObjectOfType<GameController>();
             
-            // Инициализация коллекций для каждого игрока
             _abilityCounts[PieceOwner.Player] = new Dictionary<AbilityType, int>();
             _abilityCounts[PieceOwner.Opponent] = new Dictionary<AbilityType, int>();
             _selectedAbilities = new Dictionary<PieceOwner, AbilityBase>();
             _bombPieces = new Dictionary<PieceOwner, PieceView>();
             _availableAbilitiesDic = _availableAbilities.ToDictionary(a => a.Id, a => a);
 
-            // Инициализация способностей: 1 единица для каждой способности для каждого игрока
             foreach (var ability in _availableAbilities)
             {
                 _abilityCounts[PieceOwner.Player][ability.Id] = 20;
@@ -38,7 +35,6 @@ namespace Shashki
             }
         }
 
-        // Покупка способности для указанного игрока
         public void BuyAbility(PieceOwner owner, AbilityType abilityId)
         {
             if (_availableAbilities.Exists(a => a.Id == abilityId))
@@ -54,8 +50,7 @@ namespace Shashki
             }
         }
 
-        // Активация способности для указанного игрока
-        public bool ActivateAbility( AbilityType abilityId, GameController gameController)
+        public bool ActivateAbility(AbilityType abilityId, GameController gameController)
         {
             PieceOwner owner = _gameController.Owner;
             
@@ -73,12 +68,11 @@ namespace Shashki
             }
 
             _selectedAbilities[owner] = ability;
-            gameController.SetAbilitySelectionMode(true); // Включаем режим выбора шашки
+            gameController.SetAbilitySelectionMode(true, abilityId);
             Debug.Log($"[PowerUpManager] Активирована способность {ability.DisplayName} для {owner}, ждём выбора шашки");
             return true;
         }
 
-        // Применение способности к выбранной шашке
         public void ApplyToPiece(PieceView piece)
         {
             if (piece == null || !_selectedAbilities.ContainsKey(piece.Owner) || _selectedAbilities[piece.Owner] == null)
@@ -89,25 +83,30 @@ namespace Shashki
 
             var ability = _selectedAbilities[piece.Owner];
             ability.Apply(piece, this);
-            _abilityCounts[piece.Owner][ability.Id]--;
+            if (ability.Id != AbilityType.SwapSides)
+            {
+                _abilityCounts[piece.Owner][ability.Id]--;
+                _selectedAbilities[piece.Owner] = null;
+            }
             Debug.Log($"[PowerUpManager] Способность {ability.DisplayName} применена к шашке ({piece.Row}, {piece.Col}) для {piece.Owner}, осталось: {_abilityCounts[piece.Owner][ability.Id]}");
-            _selectedAbilities[piece.Owner] = null;
         }
 
-        // Получить количество способности для указанного игрока
+        public AbilityBase GetAbilityInstance(AbilityType abilityId)
+        {
+            return _availableAbilities.Find(a => a.Id == abilityId);
+        }
+
         public int GetAbilityCount(PieceOwner owner, AbilityType abilityId)
         {
             return _abilityCounts[owner].GetValueOrDefault(abilityId, 0);
         }
 
-        // Назначение бомбы для указанного игрока
         public void SetBombPiece(PieceView piece)
         {
             _bombPieces[piece.Owner] = piece;
             Debug.Log($"[PowerUpManager] Назначена бомба-каикадзе на шашку ({piece.Row}, {piece.Col}) для {piece.Owner}");
         }
 
-        // Выполнение взрыва бомбы для указанного игрока
         public void ExecuteBombExplosion(PieceOwner owner, BoardRoot board, PieceHolder pieceHolder)
         {
             if (!_bombPieces.ContainsKey(owner) || _bombPieces[owner] == null)
@@ -117,17 +116,32 @@ namespace Shashki
             }
 
             _bombPieces[owner].ExecuteAbility(board, pieceHolder);
-            _bombPieces[owner] = null; // Очищаем после взрыва
+            _bombPieces[owner] = null;
             Debug.Log($"[PowerUpManager] Взрыв бомбы-каикадзе выполнен для {owner}");
+        }
+
+        public void ConsumeAbility(PieceOwner owner, AbilityType abilityId)
+        {
+            if (_abilityCounts[owner].ContainsKey(abilityId))
+            {
+                _abilityCounts[owner][abilityId]--;
+                _selectedAbilities[owner] = null;
+                Debug.Log($"[PowerUpManager] Способность {abilityId} для {owner} потреблена, осталось: {_abilityCounts[owner][abilityId]}");
+            }
         }
 
         private void Update()
         {
-            // Тестовые клавиши для покупки способностей для каждого игрока
             if (Input.GetKeyDown(KeyCode.Keypad1))
                 BuyAbility(PieceOwner.Player, AbilityType.BombKaikaze);
             if (Input.GetKeyDown(KeyCode.Keypad2))
                 BuyAbility(PieceOwner.Opponent, AbilityType.BombKaikaze);
+            if (Input.GetKeyDown(KeyCode.Keypad3))
+                BuyAbility(PieceOwner.Player, AbilityType.SwapSides);
+            if (Input.GetKeyDown(KeyCode.Keypad4))
+                BuyAbility(PieceOwner.Opponent, AbilityType.SwapSides);
+            if (Input.GetKeyDown(KeyCode.Keypad5))
+                ActivateAbility(AbilityType.SwapSides, _gameController);
         }
     }
 }

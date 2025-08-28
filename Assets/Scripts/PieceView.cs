@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -13,12 +14,12 @@ namespace Shashki
         [SerializeField] private Color _colorHighlight;
         [SerializeField] private SpriteRenderer _renderer;
         [SerializeField] private bool _isKing;
-        [SerializeField] private AbilityBase _ability; // Добавлено: способность, привязанная к шашке
+        [SerializeField] private AbilityBase _ability;
         
         public int Row => _row;
         public int Col => _col;
         public PieceOwner Owner => _owner;
-        public bool IsKing => _isKing;
+       public bool IsKing => _isKing;
         public AbilityBase Ability => _ability;
 
         public void SetData(int row, int col, PieceOwner owner, Color color)
@@ -75,10 +76,6 @@ namespace Shashki
             }
         }
 
-        /// <summary>
-        /// Получить список возможных ходов (обычные шаги или цепочка поеданий).
-        /// Если есть поедания, обычные ходы исключаются.
-        /// </summary>
         public List<Move> GetPossibleMoves(BoardRoot board)
         {
             List<Move> moves = new List<Move>();
@@ -89,7 +86,7 @@ namespace Shashki
 
             if (captureMoves.Count > 0)
             {
-                Debug.Log($"[PieceView] Найдено {captureMoves.Count} ходов с поеданием для шашки ({Row}, {Col})");
+                Debug.Log($"[PieceView] Найдено {captureMoves.Count} ходов с поеданием для шашки ({Row}, {Col}): {string.Join(", ", captureMoves.Select(m => $"({m.To.Row}, {m.To.Col})"))}");
                 return captureMoves;
             }
 
@@ -104,7 +101,7 @@ namespace Shashki
                 AddKingMoves(board, moves);
             }
 
-            Debug.Log($"[PieceView] Найдено {moves.Count} обычных ходов для шашки ({Row}, {Col})");
+            Debug.Log($"[PieceView] Найдено {moves.Count} обычных ходов для шашки ({Row}, {Col}): {string.Join(", ", moves.Select(m => $"({m.To.Row}, {m.To.Col})"))}");
             return moves;
         }
 
@@ -156,12 +153,10 @@ namespace Shashki
         private void AddCaptureChainMoves(BoardRoot board, int currentRow, int currentCol, List<PieceView> captured, List<Move> moves)
         {
             int[] dirs = { -1, 1 };
-
             foreach (int dr in dirs)
             {
                 foreach (int dc in dirs)
                 {
-                    // Поедание для обычной шашки или дамки (на соседней клетке)
                     int midRow = currentRow + dr;
                     int midCol = currentCol + dc;
                     int landRow = currentRow + dr * 2;
@@ -173,16 +168,8 @@ namespace Shashki
                         var landCell = board.GetCell(landRow, landCol);
                         var midPiece = board.GetPieceAt(midRow, midCol);
 
-                        // Проверяем, можно ли съесть шашку
                         bool canCapture = midCell != null && landCell != null && midPiece != null && midPiece.Owner != Owner &&
                                          board.GetPieceAt(landRow, landCol) == null && !captured.Contains(midPiece);
-
-                        // Запрещаем поедание шашек на границах доски
-                        if (canCapture && (midRow == 0 || midRow == board.Rows - 1 || midCol == 0 || midCol == board.Cols - 1))
-                        {
-                            Debug.Log($"[PieceView] Поедание шашки на ({midRow}, {midCol}) запрещено (на границе доски)");
-                            canCapture = false;
-                        }
 
                         if (canCapture)
                         {
@@ -196,10 +183,8 @@ namespace Shashki
                             });
                             Debug.Log($"[PieceView] Добавлен ход с поеданием: ({currentRow}, {currentCol}) -> ({landRow}, {landCol}), съедена шашка на ({midRow}, {midCol})");
 
-                            // Временно удаляем съеденную шашку из карты для рекурсии
                             board.UnregisterPiece(midRow, midCol);
                             AddCaptureChainMoves(board, landRow, landCol, newCaptured, moves);
-                            // Восстанавливаем карту
                             board.RegisterPiece(midPiece, midRow, midCol);
                         }
                     }
@@ -208,15 +193,14 @@ namespace Shashki
                         Debug.Log($"[PieceView] Поедание с ({currentRow}, {currentCol}) в направлении ({dr}, {dc}) невозможно: вне доски");
                     }
 
-                    // Дамка: проверяем поедание на любом расстоянии
                     if (IsKing)
                     {
                         for (int i = 1; i < board.Rows; i++)
                         {
-                             midRow = currentRow + dr * i;
-                             midCol = currentCol + dc * i;
-                             landRow = currentRow + dr * (i + 1);
-                             landCol = currentCol + dc * (i + 1);
+                            midRow = currentRow + dr * i;
+                            midCol = currentCol + dc * i;
+                            landRow = currentRow + dr * (i + 1);
+                            landCol = currentCol + dc * (i + 1);
 
                             if (!board.IsInside(midRow, midCol)) break;
                             if (!board.IsInside(landRow, landCol)) continue;
@@ -228,7 +212,6 @@ namespace Shashki
                             bool canCapture = midCell != null && landCell != null && midPiece != null && midPiece.Owner != Owner &&
                                              board.GetPieceAt(landRow, landCol) == null && !captured.Contains(midPiece);
 
-                            // Запрещаем поедание шашек на границах доски
                             if (canCapture && (midRow == 0 || midRow == board.Rows - 1 || midCol == 0 || midCol == board.Cols - 1))
                             {
                                 Debug.Log($"[PieceView] Поедание шашки на ({midRow}, {midCol}) запрещено (на границе доски)");
@@ -247,12 +230,10 @@ namespace Shashki
                                 });
                                 Debug.Log($"[PieceView] Добавлен ход дамки с поеданием: ({currentRow}, {currentCol}) -> ({landRow}, {landCol}), съедена шашка на ({midRow}, {midCol})");
 
-                                // Временно удаляем съеденную шашку из карты для рекурсии
                                 board.UnregisterPiece(midRow, midCol);
                                 AddCaptureChainMoves(board, landRow, landCol, newCaptured, moves);
-                                // Восстанавливаем карту
                                 board.RegisterPiece(midPiece, midRow, midCol);
-                                break; // Только одно поедание за раз по этой диагонали
+                                break;
                             }
                             if (midPiece != null) break;
                         }
@@ -261,9 +242,6 @@ namespace Shashki
             }
         }
 
-        /// <summary>
-        /// Подсветить возможные ходы для этой шашки.
-        /// </summary>
         public void HighlightPossibleMoves(BoardRoot board, bool highlight)
         {
             var moves = GetPossibleMoves(board);

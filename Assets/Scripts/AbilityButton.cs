@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -60,8 +61,20 @@ namespace Shashki
             int count = _powerUpManager.GetAbilityCount(_currentOwner, _abilityType);
             _button.interactable = count > 0;
             if (_countText != null)
-                _countText.text = $"{_abilityType} {count}";
+                _countText.text = $"{_abilityType}<br>{count}";
             Debug.Log($"[AbilityButton] Состояние кнопки {_abilityType}: доступно = {count > 0}, количество = {count}");
         }
+
+#if UNITY_EDITOR
+        
+        private void OnValidate()
+        {
+            gameObject.name = $"AbilityButton_{_abilityType}";
+            if (_countText != null)
+                _countText.text = $"{_abilityType}";
+        }
+        
+#endif
+     
     }
 }

@@ -4,6 +4,14 @@ using UnityEngine;
 
 namespace Shashki
 {
+    public enum GameState
+    {
+        NormalTurn,          // Обычный ход шашками
+        SelectingAbilityPiece, // Выбор шашки для способности (общий)
+        SelectingSwapFirstPiece,  // Выбор своей шашки для SwapSides
+        SelectingSwapSecondPiece  // Выбор чужой шашки для SwapSides
+    }
+
     public class GameController : MonoBehaviour
     {
         [SerializeField] private BoardRoot _board;
@@ -14,7 +22,8 @@ namespace Shashki
         
         private PieceView _selectedPiece;
         private PieceOwner _currentPlayer = PieceOwner.Player;
-        private bool _isSelectingAbilityPiece;
+        private GameState _currentState = GameState.NormalTurn;
+        private PieceView _firstSwapPiece; // Для SwapSides: первая выбранная шашка (своя)
         public PieceOwner Owner => _currentPlayer;
         public event Action OnTurnEnd;
 
@@ -28,17 +37,26 @@ namespace Shashki
             HandleInput();
         }
 
-        public void SetAbilitySelectionMode(bool isSelecting)
+        public void SetAbilitySelectionMode(bool isSelecting, AbilityType abilityType = AbilityType.None)
         {
-            _isSelectingAbilityPiece = isSelecting;
             if (isSelecting)
             {
+                if (abilityType == AbilityType.SwapSides)
+                {
+                    _currentState = GameState.SelectingSwapFirstPiece;
+                }
+                else
+                {
+                    _currentState = GameState.SelectingAbilityPiece;
+                }
                 HighlightPlayerPieces(true);
             }
             else
             {
+                _currentState = GameState.NormalTurn;
                 HighlightPlayerPieces(false);
-                // Не вызываем DeselectPiece(), чтобы не сбросить выбор шашки, если она уже выбрана
+                HighlightOpponentPieces(false); // Убираем подсветку чужих шашек
+                _firstSwapPiece = null;
             }
         }
 
@@ -57,6 +75,30 @@ namespace Shashki
                     piece.SetData(piece.Row, piece.Col, piece.Owner);
                 }
             }
+        }
+
+        private void HighlightOpponentPieces(bool highlight)
+        {
+            var opponent = _currentPlayer == PieceOwner.Player ? PieceOwner.Opponent : PieceOwner.Player;
+            var pieces = _pieceHolder.GetPieces().Values.Where(p => p.Owner == opponent);
+            foreach (var piece in pieces)
+            {
+                if (highlight && _firstSwapPiece != null && IsAdjacent(_firstSwapPiece, piece))
+                {
+                    piece.SetHighlight();
+                }
+                else
+                {
+                    piece.SetBaseColor();
+                }
+            }
+        }
+
+        private bool IsAdjacent(PieceView piece1, PieceView piece2)
+        {
+            int dr = Mathf.Abs(piece1.Row - piece2.Row);
+            int dc = Mathf.Abs(piece1.Col - piece2.Col);
+            return (dr == 1 && dc == 0) || (dr == 0 && dc == 1) || (dr == 1 && dc == 1); // Соседние клетки, включая диагонали
         }
 
         private void HandleInput()
@@ -81,100 +123,119 @@ namespace Shashki
                 // Выбираем первое попадание по шашке или клетке
                 GameObject hitObject = hits.FirstOrDefault(h => h.collider != null).collider.gameObject;
 
-                // Режим выбора шашки для способности
-                if (_isSelectingAbilityPiece)
-                {
-                    PieceView piece = hitObject.GetComponent<PieceView>();
-                    if (piece != null && piece.Owner == _currentPlayer)
-                    {
-                        _powerUpManager.ApplyToPiece(piece);
-                        SetAbilitySelectionMode(false); // Выключаем режим выбора
-                        Debug.Log($"[GameController] Способность применена к шашке ({piece.Row}, {piece.Col}), выбор шашки для хода не произведён");
-                    }
-                    else
-                    {
-                        Debug.Log($"[GameController] Клик в режиме способности игнорируется: не попали по шашке игрока (hit: {hitObject.name})");
-                    }
-                    return;
-                }
+                PieceView clickedPiece = hitObject.GetComponent<PieceView>();
+                BoardCell targetCell = hitObject.GetComponent<BoardCell>();
 
-                // Если шашка уже выбрана, проверяем клик по клетке для хода
-                if (_selectedPiece != null)
+                switch (_currentState)
                 {
-                    BoardCell targetCell = hitObject.GetComponent<BoardCell>();
-                    if (targetCell != null && _selectedPiece.Owner == _currentPlayer)
-                    {
-                        Debug.Log($"[GameController] Пытаемся сделать ход шашкой ({_selectedPiece.Row}, {_selectedPiece.Col}) в клетку ({targetCell.Row}, {targetCell.Col})");
-                        if (_pieceHolder.TryMove(_selectedPiece, targetCell, out bool continueCapturing))
+                    case GameState.SelectingAbilityPiece:
+                        if (clickedPiece != null && clickedPiece.Owner == _currentPlayer)
                         {
-                            var newMoves = _selectedPiece.GetPossibleMoves(_board);
-                            var count = newMoves.Where(m => m.IsCapture).Count();
-                            Debug.Log($"[GameController] Новые ходы для шашки ({_selectedPiece.Row}, {_selectedPiece.Col}): {newMoves.Count}, поедания: {count}");
+                            _powerUpManager.ApplyToPiece(clickedPiece);
+                            SetAbilitySelectionMode(false);
+                            Debug.Log($"[GameController] Способность применена к шашке ({clickedPiece.Row}, {clickedPiece.Col})");
+                        }
+                        break;
 
-                            if (!continueCapturing || !newMoves.Exists(m => m.IsCapture))
+                    case GameState.SelectingSwapFirstPiece:
+                        if (clickedPiece != null && clickedPiece.Owner == _currentPlayer)
+                        {
+                            _firstSwapPiece = clickedPiece;
+                            _powerUpManager.ApplyToPiece(clickedPiece); // Применяем способность к первой шашке
+                            _currentState = GameState.SelectingSwapSecondPiece;
+                            HighlightOpponentPieces(true); // Подсвечиваем соседние чужие шашки
+                            Debug.Log($"[GameController] Выбрана своя шашка для обмена ({clickedPiece.Row}, {clickedPiece.Col}). Теперь выберите соседнюю чужую.");
+                        }
+                        break;
+
+                    case GameState.SelectingSwapSecondPiece:
+                        if (clickedPiece != null && clickedPiece.Owner != _currentPlayer && IsAdjacent(_firstSwapPiece, clickedPiece))
+                        {
+                            // Находим способность SwapSides
+                            var swapAbility = _powerUpManager.GetAbilityInstance(AbilityType.SwapSides) as SwapSidesAbility;
+                            if (swapAbility != null)
                             {
-                               
-                                _powerUpManager.ExecuteBombExplosion(_currentPlayer, _board, _pieceHolder); // Взрыв в конце хода
-                                _currentPlayer = (_currentPlayer == PieceOwner.Player) ? PieceOwner.Opponent : PieceOwner.Player;
-                                Debug.Log($"[GameController] Ход сделан! Теперь ходит: {_currentPlayer}");
-                                DeselectPiece();
-                                OnTurnEnd?.Invoke();
-                              
+                                swapAbility.PerformSwap(_firstSwapPiece, clickedPiece, _board, _pieceHolder);
+                                _powerUpManager.ConsumeAbility(_currentPlayer, AbilityType.SwapSides); // Уменьшаем счетчик
+                                // Проверяем, стала ли шашка дамкой
+                                CheckForKingPromotion(_firstSwapPiece);
+                                CheckForKingPromotion(clickedPiece);
+                                // Выбираем свою шашку для продолжения хода
+                                SelectPiece(_firstSwapPiece);
                             }
-                            else
-                            {
-                                _selectedPiece.HighlightPossibleMoves(_board, false);
-                                Debug.Log($"[GameController] Продолжаем поедание для шашки на ({_selectedPiece.Row}, {_selectedPiece.Col}), ходов: {newMoves.Count}");
-                                _selectedPiece.HighlightPossibleMoves(_board, true);
-                            }
+                            SetAbilitySelectionMode(false); // Возвращаемся в нормальный режим
+                            Debug.Log($"[GameController] Обмен выполнен с чужой шашкой ({clickedPiece.Row}, {clickedPiece.Col})");
                         }
                         else
                         {
-                            Debug.Log($"[GameController] Ход шашкой ({_selectedPiece.Row}, {_selectedPiece.Col}) в ({targetCell.Row}, {targetCell.Col}) не удался");
+                            Debug.Log($"[GameController] Invalid selection for second piece.");
                         }
-                    }
-                    else
-                    {
-                        Debug.Log($"[GameController] Клик по {hitObject.name} игнорируется: не клетка или шашка не принадлежит игроку");
-                    }
-                    return;
-                }
+                        break;
 
-                // Проверяем клик по шашке
-                PieceView clickedPiece = hitObject.GetComponent<PieceView>();
-                if (clickedPiece != null && clickedPiece.Owner == _currentPlayer)
-                {
-                    SelectPiece(clickedPiece);
+                    case GameState.NormalTurn:
+                        if (_selectedPiece != null)
+                        {
+                            if (targetCell != null && _selectedPiece.Owner == _currentPlayer)
+                            {
+                                if (_pieceHolder.TryMove(_selectedPiece, targetCell, out bool continueCapturing))
+                                {
+                                    var newMoves = _selectedPiece.GetPossibleMoves(_board);
+                                    if (!continueCapturing || !newMoves.Exists(m => m.IsCapture))
+                                    {
+                                        _powerUpManager.ExecuteBombExplosion(_currentPlayer, _board, _pieceHolder);
+                                        _currentPlayer = (_currentPlayer == PieceOwner.Player) ? PieceOwner.Opponent : PieceOwner.Player;
+                                        DeselectPiece();
+                                        OnTurnEnd?.Invoke();
+                                    }
+                                    else
+                                    {
+                                        _selectedPiece.HighlightPossibleMoves(_board, false);
+                                        _selectedPiece.HighlightPossibleMoves(_board, true);
+                                    }
+                                }
+                            }
+                        }
+                        else if (clickedPiece != null && clickedPiece.Owner == _currentPlayer)
+                        {
+                            SelectPiece(clickedPiece);
+                        }
+                        break;
                 }
-                else
-                {
-                    Debug.Log($"[GameController] Клик по {hitObject.name} игнорируется: не шашка или не принадлежит текущему игроку ({_currentPlayer})");
-                }
+            }
+        }
+
+        private void CheckForKingPromotion(PieceView piece)
+        {
+            if (!piece.IsKing &&
+                ((piece.Owner == PieceOwner.Player && piece.Row == 0) ||
+                 (piece.Owner == PieceOwner.Opponent && piece.Row == _board.Rows - 1)))
+            {
+                piece.PromoteToKing();
+                Debug.Log($"[GameController] Шашка ({piece.Row}, {piece.Col}) стала дамкой после обмена!");
             }
         }
 
         private void OnPlayerChanged()
         {
-           var pieces =  _pieceHolder.GetPieces().Values.Where(p => p.Owner == _currentPlayer).ToList();
-           bool hasMove = false;
-           
-           foreach (var p in pieces)
-           {
-               var moves = p.GetPossibleMoves(_board);
-               
-               if (moves.Any())
-                   hasMove = true;
-           }
+            var pieces = _pieceHolder.GetPieces().Values.Where(p => p.Owner == _currentPlayer).ToList();
+            bool hasMove = false;
 
-           if (!hasMove && pieces.Count > 0)
-           {
-               Debug.Log($"Оставшиеся шашки заблокированы {pieces.Count}");
-               for (var index = 0; index < pieces.Count; index++)
-               {
-                   var p = pieces[index];
-                   _pieceHolder.PieceDestory(p);
-               }
-           }
+            foreach (var p in pieces)
+            {
+                var moves = p.GetPossibleMoves(_board);
+                if (moves.Any())
+                    hasMove = true;
+            }
+
+            if (!hasMove && pieces.Count > 0)
+            {
+                Debug.Log($"Оставшиеся шашки заблокированы {pieces.Count}");
+                for (var index = 0; index < pieces.Count; index++)
+                {
+                    var p = pieces[index];
+                    _pieceHolder.PieceDestory(p);
+                }
+            }
         }
 
         private void SelectPiece(PieceView piece)

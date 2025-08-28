@@ -56,5 +56,10 @@ namespace Shashki
             board.UnregisterPiece(centerRow, centerCol);
             Debug.Log($"[BombKaikazeAbility] Шашка-бомба на ({centerRow}, {centerCol}) уничтожена");
         }
+        
+        public void OnValidate()
+        {
+            _id = AbilityType.BombKaikaze;
+        }
     }
 }
