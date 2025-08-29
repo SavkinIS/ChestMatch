@@ -1,5 +1,8 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace Shashki
@@ -11,6 +14,13 @@ namespace Shashki
         SelectingSwapFirstPiece,  // Выбор своей шашки для SwapSides
         SelectingSwapSecondPiece  // Выбор чужой шашки для SwapSides
     }
+    
+    public enum Winner
+    {
+        Player,
+        Opponent,
+        Draw
+    }
 
     public class GameController : MonoBehaviour
     {
@@ -19,22 +29,83 @@ namespace Shashki
         [SerializeField] private PowerUpManager _powerUpManager;
         [SerializeField] private LayerMask _piecesLayer;
         [SerializeField] private LayerMask _cellsLayer;
+        [SerializeField] private float _turnDelay = 15f;
+        [SerializeField] private TimerProgress _timerProgress;
+        [SerializeField] private TMPro.TextMeshProUGUI _currentPlayerText;
+        
         
         private PieceView _selectedPiece;
         private PieceOwner _currentPlayer = PieceOwner.Player;
         private GameState _currentState = GameState.NormalTurn;
-        private PieceView _firstSwapPiece; // Для SwapSides: первая выбранная шашка (своя)
+        private PieceView _firstSwapPiece; 
+        
+       
+        
+        private float _turnTime;
+        private bool _canTick;
+        private Dictionary<PieceOwner, int> _playerSkipMovesDic;
+        private bool _isGameOver;
         public PieceOwner Owner => _currentPlayer;
         public event Action OnTurnEnd;
+        public event Action<Winner> OnGameOver;
 
         private void Awake()
         {
+            _turnTime = _turnDelay;
             OnTurnEnd += OnPlayerChanged;
+            _canTick = true;
+            _currentPlayerText.text = $"Текущий ишгрок {_currentPlayer}";
+
+            _playerSkipMovesDic = new Dictionary<PieceOwner, int>()
+            {
+                { PieceOwner.Player, 0 },
+                { PieceOwner.Opponent, 0 },
+            };
         }
 
         private void Update()
         {
+            if (!_canTick)
+                return;
+                
+            _turnTime -= Time.deltaTime;
+            if (_turnTime < 0)
+            {
+                _playerSkipMovesDic[_currentPlayer]++;
+                EndTurn();
+            }
+            else
+            {
+                _timerProgress.SetProgress(_turnTime/_turnDelay);
+            }
+            
             HandleInput();
+        }
+
+        private void EndTurn()
+        {
+            _currentPlayer = (_currentPlayer == PieceOwner.Player) ? PieceOwner.Opponent : PieceOwner.Player;
+            
+            _timerProgress.SetOwner(_currentPlayer == PieceOwner.Player);
+            _timerProgress.ResetProgress();
+            _turnTime = _turnDelay;
+            OnTurnEnd?.Invoke();
+            _canTick = false;
+            _currentPlayerText.text = $"Текущий ишгрок {_currentPlayer}";
+            StartCoroutine(SwitchTurn());
+        }
+
+        private void EndGame(Winner winner)
+        {
+            _isGameOver = true;
+            Debug.Log($"[GameController] Игра окончена! Победитель: {winner}");
+            OnGameOver?.Invoke(winner);
+        }
+        
+        private IEnumerator SwitchTurn()
+        {
+            yield return new WaitForSeconds(3);
+            _canTick = true;
         }
 
         public void SetAbilitySelectionMode(bool isSelecting, AbilityType abilityType = AbilityType.None)
@@ -183,9 +254,9 @@ namespace Shashki
                                     if (!continueCapturing || !newMoves.Exists(m => m.IsCapture))
                                     {
                                         _powerUpManager.ExecuteBombExplosion(_currentPlayer, _board, _pieceHolder);
-                                        _currentPlayer = (_currentPlayer == PieceOwner.Player) ? PieceOwner.Opponent : PieceOwner.Player;
                                         DeselectPiece();
-                                        OnTurnEnd?.Invoke();
+                                        _playerSkipMovesDic[_currentPlayer] = 0;
+                                        EndTurn();
                                     }
                                     else
                                     {
@@ -259,5 +330,16 @@ namespace Shashki
                 _selectedPiece = null;
             }
         }
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            if (_timerProgress == null)
+                _timerProgress = FindFirstObjectByType<TimerProgress>();
+        }
+
+
+#endif
     }
+
 }
