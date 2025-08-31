@@ -10,6 +10,7 @@ namespace Shashki
         [SerializeField] private RectTransform _fillImageRect;
         [SerializeField] private Color _playerColor;
         [SerializeField] private Color _opponentColor;
+        [SerializeField] private TMPro.TextMeshProUGUI _timerText;
             
         [Range(0f, 1f)] [SerializeField] public float _value;
         private object _maxWidth;
@@ -27,6 +28,18 @@ namespace Shashki
             _fillImageRect.localScale = new Vector3(progress, 1f, 1f);
             // Или используем sizeDelta, если нужно точное управление шириной
             // _fillImageRect.sizeDelta = new Vector2(_maxWidth * progress, fillImageRect.sizeDelta.y);
+        }
+
+        public void SetTimeTxt(float time)
+        {
+            if (time <= 0)
+            {
+                _timerText.text = "";
+            }
+            else
+            {
+                _timerText.text = time.ToString("00.00")+"sec";
+            }
         }
 
         public void SetOwner(bool isPlayer)

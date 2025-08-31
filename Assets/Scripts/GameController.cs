@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace Shashki
@@ -32,14 +31,14 @@ namespace Shashki
         [SerializeField] private float _turnDelay = 15f;
         [SerializeField] private TimerProgress _timerProgress;
         [SerializeField] private TMPro.TextMeshProUGUI _currentPlayerText;
+        [SerializeField] private EndGamePanel _endGamePanel;
+        
         
         
         private PieceView _selectedPiece;
         private PieceOwner _currentPlayer = PieceOwner.Player;
         private GameState _currentState = GameState.NormalTurn;
         private PieceView _firstSwapPiece; 
-        
-       
         
         private float _turnTime;
         private bool _canTick;
@@ -54,7 +53,8 @@ namespace Shashki
             _turnTime = _turnDelay;
             OnTurnEnd += OnPlayerChanged;
             _canTick = true;
-            _currentPlayerText.text = $"Текущий ишгрок {_currentPlayer}";
+            _currentPlayerText.text = $"Текущий игрок {_currentPlayer}";
+            _endGamePanel.ClosePanel();
 
             _playerSkipMovesDic = new Dictionary<PieceOwner, int>()
             {
@@ -65,18 +65,26 @@ namespace Shashki
 
         private void Update()
         {
-            if (!_canTick)
-                return;
+            if (_isGameOver) return; // Останавливаем ввод и таймер при окончании игры
+            
+            if (!_canTick) return;
                 
             _turnTime -= Time.deltaTime;
             if (_turnTime < 0)
             {
                 _playerSkipMovesDic[_currentPlayer]++;
+                if (_playerSkipMovesDic[_currentPlayer] >= 2)
+                {
+                    // Игрок пропустил 2 хода подряд — проигрыш
+                    EndGame(_currentPlayer == PieceOwner.Player ? Winner.Opponent : Winner.Player);
+                    return;
+                }
                 EndTurn();
             }
             else
             {
-                _timerProgress.SetProgress(_turnTime/_turnDelay);
+                _timerProgress.SetProgress(_turnTime / _turnDelay);
+                _timerProgress.SetTimeTxt(_turnTime);
             }
             
             HandleInput();
@@ -91,15 +99,71 @@ namespace Shashki
             _turnTime = _turnDelay;
             OnTurnEnd?.Invoke();
             _canTick = false;
-            _currentPlayerText.text = $"Текущий ишгрок {_currentPlayer}";
+            _currentPlayerText.text = $"Текущий игрок {_currentPlayer}";
             StartCoroutine(SwitchTurn());
+            
+            CheckGameOver(); // Проверяем условия после смены хода
+        }
+
+        private void CheckGameOver()
+        {
+            // Получаем шашки для обоих игроков
+            var playerPieces = _pieceHolder.GetPieces().Values.Where(p => p.Owner == PieceOwner.Player).ToList();
+            var opponentPieces = _pieceHolder.GetPieces().Values.Where(p => p.Owner == PieceOwner.Opponent).ToList();
+
+            // Все шашки съедены
+            if (playerPieces.Count == 0)
+            {
+                EndGame(Winner.Opponent);
+                return;
+            }
+            if (opponentPieces.Count == 0)
+            {
+                EndGame(Winner.Player);
+                return;
+            }
+
+            // Проверяем на отсутствие ходов (уже обрабатывается в OnPlayerChanged, но здесь подтвердим)
+            bool playerHasMoves = playerPieces.Any(p => p.GetPossibleMoves(_board).Any());
+            bool opponentHasMoves = opponentPieces.Any(p => p.GetPossibleMoves(_board).Any());
+
+            if (!playerHasMoves && playerPieces.Count > 0)
+            {
+                // Уничтожаем шашки, если заблокированы (как в исходном коде), и проверяем заново
+                Debug.Log("[GameController] Игрок заблокирован — уничтожаем шашки");
+                foreach (var p in playerPieces)
+                {
+                    _pieceHolder.PieceDestory(p);
+                }
+                CheckGameOver(); // Рекурсивно проверим после уничтожения
+                return;
+            }
+            if (!opponentHasMoves && opponentPieces.Count > 0)
+            {
+                Debug.Log("[GameController] Оппонент заблокирован — уничтожаем шашки");
+                foreach (var p in opponentPieces)
+                {
+                    _pieceHolder.PieceDestory(p);
+                }
+                CheckGameOver();
+                return;
+            }
         }
 
         private void EndGame(Winner winner)
         {
             _isGameOver = true;
+            _canTick = false; // Останавливаем таймер
             Debug.Log($"[GameController] Игра окончена! Победитель: {winner}");
             OnGameOver?.Invoke(winner);
+            _endGamePanel.Activate(winner);
+        }
+
+        // Метод для сдачи (вызвать из UI кнопки)
+        public void Surrender(PieceOwner owner)
+        {
+            if (_isGameOver) return;
+            EndGame(owner == PieceOwner.Player ? Winner.Opponent : Winner.Player);
         }
         
         private IEnumerator SwitchTurn()
@@ -126,7 +190,7 @@ namespace Shashki
             {
                 _currentState = GameState.NormalTurn;
                 HighlightPlayerPieces(false);
-                HighlightOpponentPieces(false); // Убираем подсветку чужих шашек
+                HighlightOpponentPieces(false);
                 _firstSwapPiece = null;
             }
         }
@@ -191,7 +255,6 @@ namespace Shashki
                     Debug.Log($"[GameController] Попал по: {h.collider.gameObject.name}, слой: {LayerMask.LayerToName(h.collider.gameObject.layer)}");
                 }
 
-                // Выбираем первое попадание по шашке или клетке
                 GameObject hitObject = hits.FirstOrDefault(h => h.collider != null).collider.gameObject;
 
                 PieceView clickedPiece = hitObject.GetComponent<PieceView>();
@@ -212,9 +275,9 @@ namespace Shashki
                         if (clickedPiece != null && clickedPiece.Owner == _currentPlayer)
                         {
                             _firstSwapPiece = clickedPiece;
-                            _powerUpManager.ApplyToPiece(clickedPiece); // Применяем способность к первой шашке
+                            _powerUpManager.ApplyToPiece(clickedPiece);
                             _currentState = GameState.SelectingSwapSecondPiece;
-                            HighlightOpponentPieces(true); // Подсвечиваем соседние чужие шашки
+                            HighlightOpponentPieces(true);
                             Debug.Log($"[GameController] Выбрана своя шашка для обмена ({clickedPiece.Row}, {clickedPiece.Col}). Теперь выберите соседнюю чужую.");
                         }
                         break;
@@ -222,19 +285,16 @@ namespace Shashki
                     case GameState.SelectingSwapSecondPiece:
                         if (clickedPiece != null && clickedPiece.Owner != _currentPlayer && IsAdjacent(_firstSwapPiece, clickedPiece))
                         {
-                            // Находим способность SwapSides
                             var swapAbility = _powerUpManager.GetAbilityInstance(AbilityType.SwapSides) as SwapSidesAbility;
                             if (swapAbility != null)
                             {
                                 swapAbility.PerformSwap(_firstSwapPiece, clickedPiece, _board, _pieceHolder);
-                                _powerUpManager.ConsumeAbility(_currentPlayer, AbilityType.SwapSides); // Уменьшаем счетчик
-                                // Проверяем, стала ли шашка дамкой
+                                _powerUpManager.ConsumeAbility(_currentPlayer, AbilityType.SwapSides);
                                 CheckForKingPromotion(_firstSwapPiece);
                                 CheckForKingPromotion(clickedPiece);
-                                // Выбираем свою шашку для продолжения хода
                                 SelectPiece(_firstSwapPiece);
                             }
-                            SetAbilitySelectionMode(false); // Возвращаемся в нормальный режим
+                            SetAbilitySelectionMode(false);
                             Debug.Log($"[GameController] Обмен выполнен с чужой шашкой ({clickedPiece.Row}, {clickedPiece.Col})");
                         }
                         else
@@ -307,6 +367,8 @@ namespace Shashki
                     _pieceHolder.PieceDestory(p);
                 }
             }
+            
+            CheckGameOver(); // Проверяем после возможного уничтожения шашек
         }
 
         private void SelectPiece(PieceView piece)
@@ -337,9 +399,6 @@ namespace Shashki
             if (_timerProgress == null)
                 _timerProgress = FindFirstObjectByType<TimerProgress>();
         }
-
-
 #endif
     }
-
 }
