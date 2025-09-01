@@ -32,7 +32,8 @@ namespace Shashki
         [SerializeField] private TimerProgress _timerProgress;
         [SerializeField] private TMPro.TextMeshProUGUI _currentPlayerText;
         [SerializeField] private EndGamePanel _endGamePanel;
-        
+        [SerializeField] private TurnTransitionPanel _transitionPanel; 
+        [SerializeField] private GameObject _gamePanel; 
         
         
         private PieceView _selectedPiece;
@@ -55,6 +56,7 @@ namespace Shashki
             _canTick = true;
             _currentPlayerText.text = $"Текущий игрок {_currentPlayer}";
             _endGamePanel.ClosePanel();
+            _gamePanel.SetActive(true);
 
             _playerSkipMovesDic = new Dictionary<PieceOwner, int>()
             {
@@ -72,6 +74,7 @@ namespace Shashki
             _turnTime -= Time.deltaTime;
             if (_turnTime < 0)
             {
+               
                 _playerSkipMovesDic[_currentPlayer]++;
                 if (_playerSkipMovesDic[_currentPlayer] >= 2)
                 {
@@ -93,7 +96,7 @@ namespace Shashki
         private void EndTurn()
         {
             _currentPlayer = (_currentPlayer == PieceOwner.Player) ? PieceOwner.Opponent : PieceOwner.Player;
-            
+            _timerProgress.SetTimeTxt(-1);
             _timerProgress.SetOwner(_currentPlayer == PieceOwner.Player);
             _timerProgress.ResetProgress();
             _turnTime = _turnDelay;
@@ -157,6 +160,9 @@ namespace Shashki
             Debug.Log($"[GameController] Игра окончена! Победитель: {winner}");
             OnGameOver?.Invoke(winner);
             _endGamePanel.Activate(winner);
+            _gamePanel.SetActive(false);
+            if (_transitionPanel != null)
+                _transitionPanel.Hide(); // Скрываем панель при окончании игры
         }
 
         // Метод для сдачи (вызвать из UI кнопки)
@@ -168,7 +174,11 @@ namespace Shashki
         
         private IEnumerator SwitchTurn()
         {
-            yield return new WaitForSeconds(3);
+            if (_transitionPanel != null)
+                _transitionPanel.Show();
+            yield return new WaitForSeconds(2);
+            if (_transitionPanel != null)
+                _transitionPanel.Hide();
             _canTick = true;
         }
 
@@ -398,6 +408,8 @@ namespace Shashki
         {
             if (_timerProgress == null)
                 _timerProgress = FindFirstObjectByType<TimerProgress>();
+            if (_transitionPanel == null)
+                _transitionPanel = FindFirstObjectByType<TurnTransitionPanel>();
         }
 #endif
     }
