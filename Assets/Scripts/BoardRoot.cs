@@ -17,10 +17,6 @@ namespace Shashki
         [SerializeField] private bool _darkSquaresOnly = false;
         [SerializeField] private bool _checkerPattern = true;
 
-        [Header("Materials (saved paths)")]
-        [Tooltip("GUID материалов, созданных автоматически. Не трогать вручную.")]
-        [SerializeField] private string _lightMaterialGuid;
-        [SerializeField] private string _darkMaterialGuid;
         [Space(2)]
         [Header("Cells")]
         [SerializeField] private List<BoardCell> _cells;
@@ -31,8 +27,6 @@ namespace Shashki
         public float Spacing => _spacing;
         public bool DarkSquaresOnly => _darkSquaresOnly;
         public bool CheckerPattern => _checkerPattern;
-        public string LightMaterialGuid => _lightMaterialGuid;
-        public string DarkMaterialGuid => _darkMaterialGuid;
         public List<BoardCell> Cells => _cells;
 
         private Dictionary<(int row, int col), BoardCell> _cellLookup = new Dictionary<(int, int), BoardCell>();
@@ -63,11 +57,6 @@ namespace Shashki
             _checkerPattern = checkerPattern;
         }
 
-        public void SetMaterials(string lightMaterialGuid, string darkMaterialGuid)
-        {
-            _lightMaterialGuid = lightMaterialGuid;
-            _darkMaterialGuid = darkMaterialGuid;
-        }
 
         public void SetCells(List<BoardCell> cells)
         {
@@ -163,6 +152,14 @@ namespace Shashki
             }
 
             return best;
+        }
+
+        public void OnTurnEnd()
+        {
+            foreach (var c in _cells)
+            {
+                c.SetHighlight(false);
+            }
         }
     }
 }

@@ -7,6 +7,7 @@
 using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEditor;
 
@@ -33,12 +34,9 @@ namespace Shashki.Editor
         private bool _darkSquaresOnly = false;     // Создавать только тёмные клетки
         private bool _checkerPattern = true;       // Включить шахматный паттерн
 
-        // Цвета клеток
-        private Color _lightColor = new Color(0.92f, 0.92f, 0.92f, 1f);
-        private Color _darkColor = new Color(0.20f, 0.20f, 0.20f, 1f);
 
         // Имя родителя
-        private string _parentName = "Board_8x8";
+        private string _parentName = "Board";
 
         private const string _menuPath = "Tools/Shashki/Board Generator…";
         private const string _autoFolder = "Assets/_Auto/BoardMaterials";
@@ -71,8 +69,8 @@ namespace Shashki.Editor
             EditorGUILayout.LabelField("Цвета", EditorStyles.boldLabel);
             using (new EditorGUI.IndentLevelScope())
             {
-                _lightColor = EditorGUILayout.ColorField("Светлая клетка", _lightColor);
-                _darkColor = EditorGUILayout.ColorField("Тёмная клетка", _darkColor);
+                // _lightColor = EditorGUILayout.ColorField("Светлая клетка", _lightColor);
+                // _darkColor = EditorGUILayout.ColorField("Тёмная клетка", _darkColor);
                 _checkerPattern = EditorGUILayout.ToggleLeft("Использовать шахматный паттерн", _checkerPattern);
                 _darkSquaresOnly = EditorGUILayout.ToggleLeft("Генерировать только тёмные клетки", _darkSquaresOnly);
             }
@@ -128,8 +126,7 @@ namespace Shashki.Editor
             EnsureFolder(_autoFolder);
 
             // Создать или загрузить материалы для клеток
-            var lightMat = GetOrCreateMaterial(Path.Combine(_autoFolder, "Board_Light.mat"), _lightColor);
-            var darkMat  = GetOrCreateMaterial(Path.Combine(_autoFolder, "Board_Dark.mat"), _darkColor);
+           
 
             // Создать объект-родитель
             GameObject parent = new GameObject(_parentName);
@@ -138,8 +135,6 @@ namespace Shashki.Editor
             // Добавить компонент BoardRoot и записать параметры
             var root = parent.AddComponent<BoardRoot>();
             root.SetData(rows, cols, _cellSize, _spacing, _darkSquaresOnly, _checkerPattern);
-            root.SetMaterials(AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(lightMat)),
-                AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(darkMat)));
 
             // Центровка доски (если включена опция)
             float step = _cellSize + _spacing;
@@ -169,7 +164,8 @@ namespace Shashki.Editor
                         }
 
                         // Создание Quad клетки
-                        var cell = Instantiate(_cellPrefab, root.transform);
+                        var cell = (BoardCell)PrefabUtility.InstantiatePrefab(_cellPrefab, root.transform);
+                        cell.transform.SetParent(root.transform);
                         Undo.RegisterCreatedObjectUndo(cell, "Создать клетку");
                         cell.name = $"Cell_{r}_{c}";
                         cell.transform.SetParent(parent.transform);
@@ -179,7 +175,6 @@ namespace Shashki.Editor
                         cell.transform.localPosition = pos;
                         cell.transform.localRotation = Quaternion.identity;
                         cell.transform.localScale = new Vector3(_cellSize, _cellSize, 1f);
-                        cell.SetColor((_checkerPattern && isDark) ? darkMat : lightMat);
                         
                         cell.SetData(r, c, isDark);
                         
@@ -227,46 +222,6 @@ namespace Shashki.Editor
                 }
                 current = combined;
             }
-        }
-
-        // Создать или загрузить материал с указанным цветом
-        private static Material GetOrCreateMaterial(string assetPath, Color color)
-        {
-            var mat = AssetDatabase.LoadAssetAtPath<Material>(assetPath);
-            if (mat == null)
-            {
-                var shader = FindBestColorShader();
-                mat = new Material(shader);
-                SetMaterialColor(mat, color);
-                AssetDatabase.CreateAsset(mat, assetPath);
-            }
-            else
-            {
-                // Обновляем цвет существующего материала
-                var matClone = Object.Instantiate(mat);
-                SetMaterialColor(matClone, color);
-                EditorUtility.CopySerialized(matClone, mat);
-                Object.DestroyImmediate(matClone);
-            }
-            AssetDatabase.SaveAssets();
-            return mat;
-        }
-
-        // Поиск подходящего шейдера для материалов
-        private static Shader FindBestColorShader()
-        {
-            Shader s = Shader.Find("Universal Render Pipeline/Lit");
-            if (s == null) s = Shader.Find("Standard");
-            if (s == null) s = Shader.Find("Unlit/Color");
-            if (s == null) throw new System.Exception("Не найден подходящий шейдер (URP Lit, Standard или Unlit/Color)");
-            return s;
-        }
-
-        // Установка цвета материала
-        private static void SetMaterialColor(Material mat, Color color)
-        {
-            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color); // URP/HDRP
-            if (mat.HasProperty("_Color")) mat.SetColor("_Color", color);       // Built-in/Unlit
         }
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace Shashki
@@ -10,8 +11,12 @@ namespace Shashki
     {
         [Min(0)] [SerializeField] private int _row;
         [Min(0)] [SerializeField] private int _col;
+        [SerializeField] private Material _lightMaterial;
+        [SerializeField] private Material _darkMaterial;
         [SerializeField] private bool _isDark;
         [SerializeField] private SpriteRenderer _renderer; // Для подсветки
+        [SerializeField] private bool _isHighlight; // Для подсветки
+        [SerializeField] private ParticleSystem _highlight;
         
         [Min(0)] public int Row => _row;
         [Min(0)] public int Col => _col;
@@ -32,6 +37,9 @@ namespace Shashki
             _row = row;
             _col = col;
             _isDark = isDark;
+            
+            _renderer.material = _isDark ? _darkMaterial : _lightMaterial;
+            
         }
 
         /// <summary>
@@ -39,13 +47,18 @@ namespace Shashki
         /// </summary>
         public void SetHighlight(bool highlight)
         {
-            if (_renderer == null) return;
-            _renderer.color = highlight ? new Color(0.5f, 1f, 0.5f, 1f) : _originalColor; // Зелёная подсветка
+            _isHighlight = highlight;
+            if (_isDark)
+            {
+                _highlight.gameObject.SetActive(_isHighlight);
+                _highlight.Play();
+            }
+           
         }
 
-        public void SetColor(Material material)
+        private void OnValidate()
         {
-            _renderer.material = material;
+            SetHighlight(_isHighlight);
         }
     }
 }

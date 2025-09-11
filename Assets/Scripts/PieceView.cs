@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -5,54 +7,94 @@ using UnityEngine.Serialization;
 
 namespace Shashki
 {
-     public class PieceView : MonoBehaviour
+    public class PieceView : MonoBehaviour
     {
+        [SerializeField] private CircleCollider2D _collider;
         [SerializeField] private int _row;
         [SerializeField] private int _col;
         [SerializeField] private PieceOwner _owner;
         [SerializeField] private Color _color;
-        [SerializeField] private Color _colorHighlight;
         [SerializeField] private SpriteRenderer _renderer;
         [SerializeField] private bool _isKing;
         [SerializeField] private AbilityBase _ability;
-        
+        [SerializeField] private ParticleSystem _highlightEffectAuraBlue;
+        [SerializeField] private ParticleSystem _highlightEffectAuraRed;
+
+        [SerializeField] private ParticleSystem _highlightEffect;
+
+        //[SerializeField] private Material _highlightMat;
+        [SerializeField] private Color _blockedColor;
+
+        [Space] [Header("Destroy")] 
+        [SerializeField]private ParticleSystem _destroyEffectBlue;
+        [SerializeField] private ParticleSystem _destroyEffectRed;
+        private ParticleSystem _destroyEffect;
+
         public int Row => _row;
         public int Col => _col;
         public PieceOwner Owner => _owner;
-       public bool IsKing => _isKing;
+        public bool IsKing => _isKing;
         public AbilityBase Ability => _ability;
 
-        public void SetData(int row, int col, PieceOwner owner, Color color)
+        private void Awake()
+        {
+            _highlightEffectAuraBlue.gameObject.SetActive(false);
+            _highlightEffectAuraRed.gameObject.SetActive(false);
+
+            _highlightEffect.Stop();
+            _highlightEffect.gameObject.SetActive(false);
+           
+            
+            _destroyEffect = _owner == PieceOwner.Player ? _destroyEffectBlue : _destroyEffectRed;
+            _destroyEffect.gameObject.SetActive(false);
+            _destroyEffectRed.gameObject.SetActive(false);
+            _destroyEffectBlue.gameObject.SetActive(false);
+        }
+
+        public void SetData(int row, int col, PieceOwner owner, Color color, Color blocked, Material highlightMat)
         {
             _row = row;
             _col = col;
             _owner = owner;
             _color = color;
-            
+
             if (_renderer == null)
                 _renderer = GetComponent<SpriteRenderer>();
-            
+
             if (_renderer != null)
             {
                 _renderer.color = _color;
             }
+
+            _highlightEffect = _owner == PieceOwner.Player ? _highlightEffectAuraBlue : _highlightEffectAuraRed;
+            _destroyEffect = _owner == PieceOwner.Player ? _destroyEffectBlue : _destroyEffectRed;
+            _blockedColor = blocked;
+            //_highlightMat = highlightMat;
+
+            // ParticleSystemRenderer psRenderer = _highlightEffectAura.GetComponent<ParticleSystemRenderer>();
+            //
+            // if (psRenderer != null && _highlightMat != null)
+            // {
+            //     psRenderer.material = _highlightMat; // Установка материала
+            // }
+
         }
-        
+
         public void SetData(int row, int col, PieceOwner owner)
         {
             _row = row;
             _col = col;
             _owner = owner;
-            
+
             if (_renderer == null)
                 _renderer = GetComponent<SpriteRenderer>();
-            
+
             if (_renderer != null)
             {
                 _renderer.color = _color;
             }
         }
-        
+
         public void PromoteToKing()
         {
             _isKing = true;
@@ -86,8 +128,13 @@ namespace Shashki
 
             if (captureMoves.Count > 0)
             {
-                Debug.Log($"[PieceView] Найдено {captureMoves.Count} ходов с поеданием для шашки ({Row}, {Col}): {string.Join(", ", captureMoves.Select(m => $"({m.To.Row}, {m.To.Col})"))}");
+                Debug.Log(
+                    $"[PieceView] Найдено {captureMoves.Count} ходов с поеданием для шашки ({Row}, {Col}): {string.Join(", ", captureMoves.Select(m => $"({m.To.Row}, {m.To.Col})"))}");
+
+                if (captureMoves.Count > 0)
+                    SetBaseColor();
                 return captureMoves;
+
             }
 
             // Если нет поеданий, добавляем обычные шаги
@@ -101,7 +148,15 @@ namespace Shashki
                 AddKingMoves(board, moves);
             }
 
-            Debug.Log($"[PieceView] Найдено {moves.Count} обычных ходов для шашки ({Row}, {Col}): {string.Join(", ", moves.Select(m => $"({m.To.Row}, {m.To.Col})"))}");
+            Debug.Log(
+                $"[PieceView] Найдено {moves.Count} обычных ходов для шашки ({Row}, {Col}): {string.Join(", ", moves.Select(m => $"({m.To.Row}, {m.To.Col})"))}");
+
+            if (moves.Count > 0)
+                SetBaseColor();
+            else
+                SetBlocked();
+
+
             return moves;
         }
 
@@ -134,7 +189,7 @@ namespace Shashki
                         int row = Row + dr * i;
                         int col = Col + dc * i;
                         if (!board.IsInside(row, col)) break;
-                        
+
                         var cell = board.GetCell(row, col);
                         if (cell == null) break;
                         if (board.GetPieceAt(row, col) != null) break;
@@ -150,7 +205,8 @@ namespace Shashki
             }
         }
 
-        private void AddCaptureChainMoves(BoardRoot board, int currentRow, int currentCol, List<PieceView> captured, List<Move> moves)
+        private void AddCaptureChainMoves(BoardRoot board, int currentRow, int currentCol, List<PieceView> captured,
+            List<Move> moves)
         {
             int[] dirs = { -1, 1 };
             foreach (int dr in dirs)
@@ -168,8 +224,9 @@ namespace Shashki
                         var landCell = board.GetCell(landRow, landCol);
                         var midPiece = board.GetPieceAt(midRow, midCol);
 
-                        bool canCapture = midCell != null && landCell != null && midPiece != null && midPiece.Owner != Owner &&
-                                         board.GetPieceAt(landRow, landCol) == null && !captured.Contains(midPiece);
+                        bool canCapture = midCell != null && landCell != null && midPiece != null &&
+                                          midPiece.Owner != Owner &&
+                                          board.GetPieceAt(landRow, landCol) == null && !captured.Contains(midPiece);
 
                         if (canCapture)
                         {
@@ -181,7 +238,8 @@ namespace Shashki
                                 IsCapture = true,
                                 CapturedPiece = midPiece
                             });
-                            Debug.Log($"[PieceView] Добавлен ход с поеданием: ({currentRow}, {currentCol}) -> ({landRow}, {landCol}), съедена шашка на ({midRow}, {midCol})");
+                            Debug.Log(
+                                $"[PieceView] Добавлен ход с поеданием: ({currentRow}, {currentCol}) -> ({landRow}, {landCol}), съедена шашка на ({midRow}, {midCol})");
 
                             board.UnregisterPiece(midRow, midCol);
                             AddCaptureChainMoves(board, landRow, landCol, newCaptured, moves);
@@ -190,7 +248,8 @@ namespace Shashki
                     }
                     else
                     {
-                        Debug.Log($"[PieceView] Поедание с ({currentRow}, {currentCol}) в направлении ({dr}, {dc}) невозможно: вне доски");
+                        Debug.Log(
+                            $"[PieceView] Поедание с ({currentRow}, {currentCol}) в направлении ({dr}, {dc}) невозможно: вне доски");
                     }
 
                     if (IsKing)
@@ -209,12 +268,16 @@ namespace Shashki
                             var landCell = board.GetCell(landRow, landCol);
                             var midPiece = board.GetPieceAt(midRow, midCol);
 
-                            bool canCapture = midCell != null && landCell != null && midPiece != null && midPiece.Owner != Owner &&
-                                             board.GetPieceAt(landRow, landCol) == null && !captured.Contains(midPiece);
+                            bool canCapture = midCell != null && landCell != null && midPiece != null &&
+                                              midPiece.Owner != Owner &&
+                                              board.GetPieceAt(landRow, landCol) == null &&
+                                              !captured.Contains(midPiece);
 
-                            if (canCapture && (midRow == 0 || midRow == board.Rows - 1 || midCol == 0 || midCol == board.Cols - 1))
+                            if (canCapture && (midRow == 0 || midRow == board.Rows - 1 || midCol == 0 ||
+                                               midCol == board.Cols - 1))
                             {
-                                Debug.Log($"[PieceView] Поедание шашки на ({midRow}, {midCol}) запрещено (на границе доски)");
+                                Debug.Log(
+                                    $"[PieceView] Поедание шашки на ({midRow}, {midCol}) запрещено (на границе доски)");
                                 canCapture = false;
                             }
 
@@ -228,13 +291,15 @@ namespace Shashki
                                     IsCapture = true,
                                     CapturedPiece = midPiece
                                 });
-                                Debug.Log($"[PieceView] Добавлен ход дамки с поеданием: ({currentRow}, {currentCol}) -> ({landRow}, {landCol}), съедена шашка на ({midRow}, {midCol})");
+                                Debug.Log(
+                                    $"[PieceView] Добавлен ход дамки с поеданием: ({currentRow}, {currentCol}) -> ({landRow}, {landCol}), съедена шашка на ({midRow}, {midCol})");
 
                                 board.UnregisterPiece(midRow, midCol);
                                 AddCaptureChainMoves(board, landRow, landCol, newCaptured, moves);
                                 board.RegisterPiece(midPiece, midRow, midCol);
                                 break;
                             }
+
                             if (midPiece != null) break;
                         }
                     }
@@ -259,18 +324,41 @@ namespace Shashki
 
         public void SetHighlight()
         {
+            _highlightEffect.gameObject.SetActive(true);
+            _highlightEffect.Play(true);
+        }
+
+        public void SetBlocked()
+        {
             if (_renderer != null)
             {
-                _renderer.color = _colorHighlight;
+                _renderer.color = _blockedColor;
             }
         }
 
         public void SetBaseColor()
         {
+            _highlightEffect.Stop();
+            _highlightEffect.gameObject.SetActive(false);
             if (_renderer != null)
             {
                 _renderer.color = _color;
             }
+        }
+
+        public void DestroyPiece()
+        {
+            _destroyEffect.gameObject.SetActive(true);
+            _destroyEffect.Play();
+            _renderer.enabled = false;
+            _collider.enabled = false;
+            StartCoroutine(DestroyAfterEffect());
+        }
+
+        private IEnumerator DestroyAfterEffect()
+        {
+            yield return new WaitForSeconds(1f);
+            _destroyEffect.gameObject.SetActive(false);
         }
     }
 }

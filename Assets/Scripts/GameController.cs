@@ -96,10 +96,12 @@ namespace Shashki
         private void EndTurn()
         {
             _currentPlayer = (_currentPlayer == PieceOwner.Player) ? PieceOwner.Opponent : PieceOwner.Player;
+            _board.OnTurnEnd();
             _timerProgress.SetTimeTxt(-1);
             _timerProgress.SetOwner(_currentPlayer == PieceOwner.Player);
             _timerProgress.ResetProgress();
             _turnTime = _turnDelay;
+            _selectedPiece = null;
             OnTurnEnd?.Invoke();
             _canTick = false;
             _currentPlayerText.text = $"Текущий игрок {_currentPlayer}";
@@ -127,9 +129,22 @@ namespace Shashki
             }
 
             // Проверяем на отсутствие ходов (уже обрабатывается в OnPlayerChanged, но здесь подтвердим)
-            bool playerHasMoves = playerPieces.Any(p => p.GetPossibleMoves(_board).Any());
-            bool opponentHasMoves = opponentPieces.Any(p => p.GetPossibleMoves(_board).Any());
+            bool playerHasMoves = false;
 
+            for (int i = 0; i < playerPieces.Count; i++)
+            {
+                if (playerPieces[i].GetPossibleMoves(_board).Count > 0)
+                    playerHasMoves = true;
+            }
+            
+            bool opponentHasMoves = false;
+                
+            for (int i = 0; i < opponentPieces.Count; i++)
+            {
+                if (opponentPieces[i].GetPossibleMoves(_board).Count > 0)
+                    opponentHasMoves = true;
+            }
+            
             if (!playerHasMoves && playerPieces.Count > 0)
             {
                 // Уничтожаем шашки, если заблокированы (как в исходном коде), и проверяем заново
@@ -253,7 +268,7 @@ namespace Shashki
                 Vector2 mousePos = Camera.main.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, 10));
                 Debug.Log($"[GameController] Клик по: {mousePos}");
 
-                RaycastHit2D[] hits = Physics2D.RaycastAll(mousePos, Vector2.zero, 20f);
+                RaycastHit2D[] hits = Physics2D.RaycastAll(mousePos, Vector2.zero, 100f);
                 if (hits.Length == 0)
                 {
                     Debug.Log("[GameController] Raycast не попал");

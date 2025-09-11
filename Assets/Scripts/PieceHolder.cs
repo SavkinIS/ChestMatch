@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Shashki;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -18,7 +19,11 @@ namespace Shashki
         [SerializeField] private PieceView _piecePrefab;
         [SerializeField] private int _rowsWithPieces = 2;
         [SerializeField] private Color _playerColor = Color.white;
+        [SerializeField] private Color _playerColorBlock;
+        [SerializeField] private Material _playerHighlightMaterial;
         [SerializeField] private Color _opponentColor = Color.black;
+        [SerializeField] private Color _opponentColorBlock;
+        [SerializeField] private Material _opponentHighlightMaterial; 
         [SerializeField] private List<PieceView> _pieces = new List<PieceView>();
 
         public void SpawnPieces()
@@ -49,23 +54,25 @@ namespace Shashki
                 // Верхние ряды
                 if (cell.Row < _rowsWithPieces)
                 {
-                    CreatePiece(cell, _opponentColor, PieceOwner.Opponent);
+                    CreatePiece(cell, _opponentColor, PieceOwner.Opponent, _opponentColorBlock, _opponentHighlightMaterial);
                 }
                 // Нижние ряды
                 else if (cell.Row >= rows - _rowsWithPieces)
                 {
-                    CreatePiece(cell, _playerColor, PieceOwner.Player);
+                    CreatePiece(cell, _playerColor, PieceOwner.Player, _playerColorBlock, _playerHighlightMaterial);
                 }
             }
 
             Debug.Log($"[PieceHolder] Расставлено {_pieces.Count} шашек");
         }
 
-        private void CreatePiece(BoardCell cell, Color color, PieceOwner owner)
+        private void CreatePiece(BoardCell cell, Color color, PieceOwner owner, Color colorBlock, Material highlightMaterial)
         {
-            var piece = Instantiate(_piecePrefab, cell.transform.position + Vector3.back * 0.01f,
-                Quaternion.identity, transform);
-            piece.SetData(cell.Row, cell.Col, owner, color);
+            var piece = (PieceView)PrefabUtility.InstantiatePrefab(_piecePrefab);
+            
+            piece.transform.position = cell.transform.position + Vector3.back * 0.01f;
+            piece.transform.parent = transform;
+            piece.SetData(cell.Row, cell.Col, owner, color, colorBlock, highlightMaterial);
             piece.name = $"Piece_{owner}";
             _pieces.Add(piece);
 
@@ -135,7 +142,8 @@ namespace Shashki
         {
             _pieces.Remove(piece);
             _board.UnregisterPiece(piece.Row, piece.Col);
-            Destroy(piece.gameObject);
+            piece.DestroyPiece();
+            // Destroy(piece.gameObject);
         }
 
         public Dictionary<(int row, int col), PieceView> GetPieces()
