@@ -129,7 +129,7 @@ namespace Shashki
             if (captureMoves.Count > 0)
             {
                 Debug.Log(
-                    $"[PieceView] Найдено {captureMoves.Count} ходов с поеданием для шашки ({Row}, {Col}): {string.Join(", ", captureMoves.Select(m => $"({m.To.Row}, {m.To.Col})"))}");
+                    $"[PieceView] Найдено {captureMoves.Count} ходов с поеданием для шашки ({Row}, {Col}): {string.Join(", ", captureMoves.Select(m => $"({m.To.Row}, {m.To.Col}) с поеданием {string.Join(", ", m.CapturedPieces.Select(p => $"({p.Row}, {p.Col})"))}"))}");
 
                 if (captureMoves.Count > 0)
                     SetBaseColor();
@@ -231,13 +231,14 @@ namespace Shashki
                         if (canCapture)
                         {
                             var newCaptured = new List<PieceView>(captured) { midPiece };
-                            moves.Add(new Move
+                            var move = new Move
                             {
                                 From = board.GetCell(currentRow, currentCol),
                                 To = landCell,
                                 IsCapture = true,
-                                CapturedPiece = midPiece
-                            });
+                                CapturedPieces = new List<PieceView>(newCaptured)
+                            };
+                            moves.Add(move);
                             Debug.Log(
                                 $"[PieceView] Добавлен ход с поеданием: ({currentRow}, {currentCol}) -> ({landRow}, {landCol}), съедена шашка на ({midRow}, {midCol})");
 
@@ -284,13 +285,14 @@ namespace Shashki
                             if (canCapture)
                             {
                                 var newCaptured = new List<PieceView>(captured) { midPiece };
-                                moves.Add(new Move
+                                var move = new Move
                                 {
                                     From = board.GetCell(currentRow, currentCol),
                                     To = landCell,
                                     IsCapture = true,
-                                    CapturedPiece = midPiece
-                                });
+                                    CapturedPieces = new List<PieceView>(newCaptured)
+                                };
+                                moves.Add(move);
                                 Debug.Log(
                                     $"[PieceView] Добавлен ход дамки с поеданием: ({currentRow}, {currentCol}) -> ({landRow}, {landCol}), съедена шашка на ({midRow}, {midCol})");
 

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Shashki;
 
 namespace Shashki
@@ -10,6 +11,6 @@ namespace Shashki
         public BoardCell From;
         public BoardCell To;
         public bool IsCapture;
-        public PieceView CapturedPiece;
+        public List<PieceView> CapturedPieces = new List<PieceView>();
     }
 }

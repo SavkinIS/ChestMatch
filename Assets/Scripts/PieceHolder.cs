@@ -1,10 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using Shashki;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.Serialization;
+using Shashki;
 
 namespace Shashki
 {
@@ -68,7 +66,7 @@ namespace Shashki
 
         private void CreatePiece(BoardCell cell, Color color, PieceOwner owner, Color colorBlock, Material highlightMaterial)
         {
-            var piece = (PieceView)PrefabUtility.InstantiatePrefab(_piecePrefab);
+            var piece = (PieceView)Instantiate(_piecePrefab);
             
             piece.transform.position = cell.transform.position + Vector3.back * 0.01f;
             piece.transform.parent = transform;
@@ -100,10 +98,13 @@ namespace Shashki
                     piece.transform.position = target.transform.position + Vector3.back * 0.01f;
 
                     // Обработка поедания
-                    if (move.IsCapture && move.CapturedPiece != null)
+                    if (move.IsCapture && move.CapturedPieces != null)
                     {
-                        PieceDestory(move.CapturedPiece);
-                        Debug.Log($"[PieceHolder] Съедена шашка на ({move.CapturedPiece.Row}, {move.CapturedPiece.Col})");
+                        foreach (var capturedPiece in move.CapturedPieces)
+                        {
+                            PieceDestory(capturedPiece);
+                            Debug.Log($"[PieceHolder] Съедена шашка на ({capturedPiece.Row}, {capturedPiece.Col})");
+                        }
                     }
 
                     // Проверяем дальнейшие поедания
