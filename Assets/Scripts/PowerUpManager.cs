@@ -9,6 +9,7 @@ namespace Shashki
     {
         [SerializeField] private List<AbilityBase> _availableAbilities;
         [SerializeField] private GameController _gameController;
+        
         private Dictionary<PieceOwner, Dictionary<AbilityType, int>> _abilityCounts = new Dictionary<PieceOwner, Dictionary<AbilityType, int>>();
         private Dictionary<PieceOwner, AbilityBase> _selectedAbilities;
         private Dictionary<AbilityType, AbilityBase> _availableAbilitiesDic;
@@ -142,6 +143,8 @@ namespace Shashki
                 BuyAbility(PieceOwner.Opponent, AbilityType.SwapSides);
             if (Input.GetKeyDown(KeyCode.Keypad5))
                 ActivateAbility(AbilityType.SwapSides, _gameController);
+            if (Input.GetKeyDown(KeyCode.Keypad6))  // НОВОЕ: для Щита
+                ActivateAbility(AbilityType.Shield, _gameController);
         }
     }
 }

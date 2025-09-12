@@ -6,7 +6,8 @@ namespace Shashki
     {
         None,
         BombKaikaze, // Можно добавить другие типы позже, например, Shield, Teleport
-        SwapSides
+        SwapSides,
+        Shield
     }
 
     public abstract class AbilityBase : ScriptableObject

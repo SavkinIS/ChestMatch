@@ -378,6 +378,9 @@ namespace Shashki
 
             foreach (var p in pieces)
             {
+                if (p.IsShielded)
+                    p.SetShield(false);
+                
                 var moves = p.GetPossibleMoves(_board);
                 if (moves.Any())
                     hasMove = true;

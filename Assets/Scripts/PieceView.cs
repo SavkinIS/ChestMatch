@@ -17,6 +17,7 @@ namespace Shashki
         [SerializeField] private SpriteRenderer _renderer;
         [SerializeField] private bool _isKing;
         [SerializeField] private AbilityBase _ability;
+        [SerializeField] private bool _isShielded;  // Новое поле: флаг щита
         [SerializeField] private ParticleSystem _highlightEffectAuraBlue;
         [SerializeField] private ParticleSystem _highlightEffectAuraRed;
 
@@ -35,6 +36,7 @@ namespace Shashki
         public PieceOwner Owner => _owner;
         public bool IsKing => _isKing;
         public AbilityBase Ability => _ability;
+        public bool IsShielded => _isShielded;  // Геттер для флага щита
 
         private void Awake()
         {
@@ -44,7 +46,6 @@ namespace Shashki
             _highlightEffect.Stop();
             _highlightEffect.gameObject.SetActive(false);
            
-            
             _destroyEffect = _owner == PieceOwner.Player ? _destroyEffectBlue : _destroyEffectRed;
             _destroyEffect.gameObject.SetActive(false);
             _destroyEffectRed.gameObject.SetActive(false);
@@ -57,6 +58,7 @@ namespace Shashki
             _col = col;
             _owner = owner;
             _color = color;
+            _isShielded = false;  // Инициализируем щит как выключенный
 
             if (_renderer == null)
                 _renderer = GetComponent<SpriteRenderer>();
@@ -77,7 +79,6 @@ namespace Shashki
             // {
             //     psRenderer.material = _highlightMat; // Установка материала
             // }
-
         }
 
         public void SetData(int row, int col, PieceOwner owner)
@@ -93,6 +94,14 @@ namespace Shashki
             {
                 _renderer.color = _color;
             }
+        }
+
+        public void SetShield(bool shielded)
+        {
+            _isShielded = shielded;
+            Debug.Log($"[PieceView] Щит для шашки ({_row}, {_col}): {_isShielded}");
+            SetBlocked();
+            // TODO: Визуал щита (например, иконка или свечение)
         }
 
         public void PromoteToKing()
@@ -134,7 +143,6 @@ namespace Shashki
                 if (captureMoves.Count > 0)
                     SetBaseColor();
                 return captureMoves;
-
             }
 
             // Если нет поеданий, добавляем обычные шаги
@@ -155,7 +163,6 @@ namespace Shashki
                 SetBaseColor();
             else
                 SetBlocked();
-
 
             return moves;
         }
@@ -226,7 +233,9 @@ namespace Shashki
 
                         bool canCapture = midCell != null && landCell != null && midPiece != null &&
                                           midPiece.Owner != Owner &&
-                                          board.GetPieceAt(landRow, landCol) == null && !captured.Contains(midPiece);
+                                          board.GetPieceAt(landRow, landCol) == null && 
+                                          !captured.Contains(midPiece) &&
+                                          !midPiece.IsShielded;  // НОВОЕ: игнорируем защищённые шашки
 
                         if (canCapture)
                         {
@@ -272,7 +281,8 @@ namespace Shashki
                             bool canCapture = midCell != null && landCell != null && midPiece != null &&
                                               midPiece.Owner != Owner &&
                                               board.GetPieceAt(landRow, landCol) == null &&
-                                              !captured.Contains(midPiece);
+                                              !captured.Contains(midPiece) &&
+                                              !midPiece.IsShielded;  // НОВОЕ: игнорируем защищённые шашки
 
                             if (canCapture && (midRow == 0 || midRow == board.Rows - 1 || midCol == 0 ||
                                                midCol == board.Cols - 1))
