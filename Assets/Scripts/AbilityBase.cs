@@ -5,9 +5,12 @@ namespace Shashki
     public enum AbilityType
     {
         None,
-        BombKaikaze, // Можно добавить другие типы позже, например, Shield, Teleport
+        BombKaikaze, 
         SwapSides,
-        Shield
+        Shield, 
+        TempKing,      
+        Freeze,         
+        HorizontalJump 
     }
 
     public abstract class AbilityBase : ScriptableObject

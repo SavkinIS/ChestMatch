@@ -28,7 +28,7 @@ namespace Shashki
         [SerializeField] private PowerUpManager _powerUpManager;
         [SerializeField] private LayerMask _piecesLayer;
         [SerializeField] private LayerMask _cellsLayer;
-        [SerializeField] private float _turnDelay = 15f;
+        [SerializeField] private float _turnDelay = 600f;
         [SerializeField] private TimerProgress _timerProgress;
         [SerializeField] private TMPro.TextMeshProUGUI _currentPlayerText;
         [SerializeField] private EndGamePanel _endGamePanel;
@@ -95,6 +95,7 @@ namespace Shashki
 
         private void EndTurn()
         {
+            
             _currentPlayer = (_currentPlayer == PieceOwner.Player) ? PieceOwner.Opponent : PieceOwner.Player;
             _board.OnTurnEnd();
             _timerProgress.SetTimeTxt(-1);
@@ -288,11 +289,18 @@ namespace Shashki
                 switch (_currentState)
                 {
                     case GameState.SelectingAbilityPiece:
-                        if (clickedPiece != null && clickedPiece.Owner == _currentPlayer)
+                        if (clickedPiece != null )
                         {
-                            _powerUpManager.ApplyToPiece(clickedPiece);
-                            SetAbilitySelectionMode(false);
-                            Debug.Log($"[GameController] Способность применена к шашке ({clickedPiece.Row}, {clickedPiece.Col})");
+                            var ability = _powerUpManager.GetCurrentAbility();
+                            if ((ability == AbilityType.Freeze &&
+                                 clickedPiece.Owner != _currentPlayer) 
+                                || (ability != AbilityType.Freeze &&
+                                    clickedPiece.Owner == _currentPlayer))
+                            {
+                                _powerUpManager.ApplyToPiece(clickedPiece);
+                                SetAbilitySelectionMode(false);
+                                Debug.Log($"[GameController] Способность {ability} применена к шашке ({clickedPiece.Row}, {clickedPiece.Col})");
+                            }
                         }
                         break;
 
@@ -329,8 +337,14 @@ namespace Shashki
                         break;
 
                     case GameState.NormalTurn:
+                        
                         if (_selectedPiece != null)
                         {
+                            if (clickedPiece != null && clickedPiece.Owner == _currentPlayer && _selectedPiece != clickedPiece)
+                            {
+                                SelectPiece(clickedPiece);
+                                break;
+                            }
                             if (targetCell != null && _selectedPiece.Owner == _currentPlayer)
                             {
                                 if (_pieceHolder.TryMove(_selectedPiece, targetCell, out bool continueCapturing))
@@ -373,18 +387,26 @@ namespace Shashki
 
         private void OnPlayerChanged()
         {
-            var pieces = _pieceHolder.GetPieces().Values.Where(p => p.Owner == _currentPlayer).ToList();
+            var allPieces = _pieceHolder.GetPieces().Values.ToList();
+            var pieces = allPieces.Where(p => p.Owner == _currentPlayer).ToList();
+            
             bool hasMove = false;
 
-            foreach (var p in pieces)
+            for (var index = 0; index < allPieces.Count; index++)
             {
-                if (p.IsShielded)
-                    p.SetShield(false);
+                var p = allPieces[index];
+                p.SetShield(false);
+                p.SetTempKing(false);
+                
+                if (p.Owner != _currentPlayer)
+                    p.SetFrozen(false);
+                
                 
                 var moves = p.GetPossibleMoves(_board);
                 if (moves.Any())
                     hasMove = true;
             }
+
 
             if (!hasMove && pieces.Count > 0)
             {

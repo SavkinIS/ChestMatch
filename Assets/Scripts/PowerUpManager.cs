@@ -16,6 +16,7 @@ namespace Shashki
         private Dictionary<PieceOwner, PieceView> _bombPieces;
 
         public event Action<PieceOwner, AbilityBase> OnAbilityAdded;
+        public GameController GameController => _gameController;
 
         private void Awake()
         {
@@ -76,18 +77,20 @@ namespace Shashki
 
         public void ApplyToPiece(PieceView piece)
         {
-            if (piece == null || !_selectedAbilities.ContainsKey(piece.Owner) || _selectedAbilities[piece.Owner] == null)
+            PieceOwner owner = _gameController.Owner;
+            
+            if (piece == null || !_selectedAbilities.ContainsKey(owner) || _selectedAbilities[owner] == null)
             {
-                Debug.LogWarning($"[PowerUpManager] Нельзя применить способность: нет выбранной способности или шашки для {piece?.Owner}");
+                Debug.LogWarning($"[PowerUpManager] Нельзя применить способность: нет выбранной способности или шашки для {owner}");
                 return;
             }
 
-            var ability = _selectedAbilities[piece.Owner];
+            var ability = _selectedAbilities[owner];
             ability.Apply(piece, this);
             if (ability.Id != AbilityType.SwapSides)
             {
-                _abilityCounts[piece.Owner][ability.Id]--;
-                _selectedAbilities[piece.Owner] = null;
+                _abilityCounts[owner][ability.Id]--;
+                _selectedAbilities[owner] = null;
             }
             Debug.Log($"[PowerUpManager] Способность {ability.DisplayName} применена к шашке ({piece.Row}, {piece.Col}) для {piece.Owner}, осталось: {_abilityCounts[piece.Owner][ability.Id]}");
         }
@@ -145,6 +148,11 @@ namespace Shashki
                 ActivateAbility(AbilityType.SwapSides, _gameController);
             if (Input.GetKeyDown(KeyCode.Keypad6))  // НОВОЕ: для Щита
                 ActivateAbility(AbilityType.Shield, _gameController);
+        }
+
+        public AbilityType GetCurrentAbility()
+        {
+            return _selectedAbilities[_gameController.Owner].Id;
         }
     }
 }

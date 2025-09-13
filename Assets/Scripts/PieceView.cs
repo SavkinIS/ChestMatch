@@ -17,7 +17,7 @@ namespace Shashki
         [SerializeField] private SpriteRenderer _renderer;
         [SerializeField] private bool _isKing;
         [SerializeField] private AbilityBase _ability;
-        [SerializeField] private bool _isShielded;  // Новое поле: флаг щита
+        [SerializeField] private bool _isShielded; // Новое поле: флаг щита
         [SerializeField] private ParticleSystem _highlightEffectAuraBlue;
         [SerializeField] private ParticleSystem _highlightEffectAuraRed;
 
@@ -26,17 +26,21 @@ namespace Shashki
         //[SerializeField] private Material _highlightMat;
         [SerializeField] private Color _blockedColor;
 
-        [Space] [Header("Destroy")] 
-        [SerializeField]private ParticleSystem _destroyEffectBlue;
+        [Space] [Header("Destroy")] [SerializeField]
+        private ParticleSystem _destroyEffectBlue;
+
         [SerializeField] private ParticleSystem _destroyEffectRed;
         private ParticleSystem _destroyEffect;
+        private bool _isFrozen;
+        private bool _isTempKing;
 
         public int Row => _row;
         public int Col => _col;
         public PieceOwner Owner => _owner;
-        public bool IsKing => _isKing;
+        public bool IsKing => _isKing || _isTempKing;
+        public bool IsFrozen => _isFrozen;
         public AbilityBase Ability => _ability;
-        public bool IsShielded => _isShielded;  // Геттер для флага щита
+        public bool IsShielded => _isShielded; // Геттер для флага щита
 
         private void Awake()
         {
@@ -45,7 +49,7 @@ namespace Shashki
 
             _highlightEffect.Stop();
             _highlightEffect.gameObject.SetActive(false);
-           
+
             _destroyEffect = _owner == PieceOwner.Player ? _destroyEffectBlue : _destroyEffectRed;
             _destroyEffect.gameObject.SetActive(false);
             _destroyEffectRed.gameObject.SetActive(false);
@@ -58,7 +62,9 @@ namespace Shashki
             _col = col;
             _owner = owner;
             _color = color;
-            _isShielded = false;  // Инициализируем щит как выключенный
+            _isShielded = false; // Инициализируем щит как выключенный
+            _isFrozen = false;
+            _isTempKing = false;
 
             if (_renderer == null)
                 _renderer = GetComponent<SpriteRenderer>();
@@ -129,6 +135,9 @@ namespace Shashki
 
         public List<Move> GetPossibleMoves(BoardRoot board)
         {
+            if  (_isFrozen)
+                return new List<Move>();
+                
             List<Move> moves = new List<Move>();
             List<Move> captureMoves = new List<Move>();
 
@@ -233,9 +242,9 @@ namespace Shashki
 
                         bool canCapture = midCell != null && landCell != null && midPiece != null &&
                                           midPiece.Owner != Owner &&
-                                          board.GetPieceAt(landRow, landCol) == null && 
+                                          board.GetPieceAt(landRow, landCol) == null &&
                                           !captured.Contains(midPiece) &&
-                                          !midPiece.IsShielded;  // НОВОЕ: игнорируем защищённые шашки
+                                          !midPiece.IsShielded; // НОВОЕ: игнорируем защищённые шашки
 
                         if (canCapture)
                         {
@@ -282,7 +291,7 @@ namespace Shashki
                                               midPiece.Owner != Owner &&
                                               board.GetPieceAt(landRow, landCol) == null &&
                                               !captured.Contains(midPiece) &&
-                                              !midPiece.IsShielded;  // НОВОЕ: игнорируем защищённые шашки
+                                              !midPiece.IsShielded; // НОВОЕ: игнорируем защищённые шашки
 
                             if (canCapture && (midRow == 0 || midRow == board.Rows - 1 || midCol == 0 ||
                                                midCol == board.Cols - 1))
@@ -371,6 +380,34 @@ namespace Shashki
         {
             yield return new WaitForSeconds(1f);
             _destroyEffect.gameObject.SetActive(false);
+        }
+
+        public void SetFrozen(bool state)
+        {
+            _isFrozen = state;
+            Debug.Log($"[PieceView] Шашка {_row}, {_col} заморожена: {_isFrozen}");
+            if (_isFrozen)
+            {
+                SetBlocked();
+            }
+            else
+            {
+                SetBaseColor();
+                _ability = null;
+            }
+        }
+
+        public void SetTempKing(bool isTempKing)
+        {
+            _isTempKing = isTempKing;
+            if (isTempKing)
+            {
+                
+            }
+            else
+            {
+                _ability = null;
+            }
         }
     }
 }
