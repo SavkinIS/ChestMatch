@@ -51,6 +51,7 @@ namespace Shashki
         public bool IsFrozen => _isFrozen;
         public AbilityBase Ability => _ability;
         public bool IsShielded => _isShielded; // Геттер для флага щита
+        public bool IsTotalKing => _isKing;
 
         private void Awake()
         {
@@ -157,10 +158,13 @@ namespace Shashki
             }
         }
 
-        public List<Move> GetPossibleMoves(BoardRoot board)
+        public List<Move> GetPossibleMoves(BoardRoot board, bool ignoreFrozen = false)
         {
-            if  (_isFrozen)
-                return new List<Move>();
+            if (!ignoreFrozen)
+            {
+                if  (_isFrozen)
+                    return new List<Move>();
+            }
                 
             List<Move> moves = new List<Move>();
             List<Move> captureMoves = new List<Move>();
@@ -397,6 +401,7 @@ namespace Shashki
             _destroyEffect.Play();
             _renderer.enabled = false;
             _collider.enabled = false;
+            ResetAbility(AbilityType.BombKamikaze);
             StartCoroutine(DestroyAfterEffect());
         }
 
@@ -404,6 +409,7 @@ namespace Shashki
         {
             yield return new WaitForSeconds(1f);
             _destroyEffect.gameObject.SetActive(false);
+            gameObject.SetActive(false);
         }
 
         public void SetFrozen(bool state)
@@ -441,6 +447,7 @@ namespace Shashki
         {
             if (_abilitySpriteDic.TryGetValue(type, out var spriteEffectHolder))
                 spriteEffectHolder.gameObject.SetActive(false);
+            CheckIsKing();
         }
 
         public void SetBomb()

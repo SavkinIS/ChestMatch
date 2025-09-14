@@ -8,17 +8,16 @@ namespace Shashki
 {
     public enum GameState
     {
-        NormalTurn,          // Обычный ход шашками
-        SelectingAbilityPiece, // Выбор шашки для способности (общий)
-        SelectingSwapFirstPiece,  // Выбор своей шашки для SwapSides
-        SelectingSwapSecondPiece  // Выбор чужой шашки для SwapSides
+        NormalTurn,
+        SelectingAbilityPiece,
+        SelectingSwapFirstPiece,
+        SelectingSwapSecondPiece
     }
     
     public enum Winner
     {
         Player,
         Opponent,
-        Draw
     }
 
     public class GameController : MonoBehaviour
@@ -33,9 +32,9 @@ namespace Shashki
         [SerializeField] private TMPro.TextMeshProUGUI _currentPlayerText;
         [SerializeField] private EndGamePanel _endGamePanel;
         [SerializeField] private TurnTransitionPanel _transitionPanel; 
-        [SerializeField] private GameObject _gamePanel; 
+        [SerializeField] private GameObject _gamePanel;
         
-        
+        private Dictionary<PieceOwner, int> _playersPoints = new Dictionary<PieceOwner, int>();
         private PieceView _selectedPiece;
         private PieceOwner _currentPlayer = PieceOwner.Player;
         private GameState _currentState = GameState.NormalTurn;
@@ -59,6 +58,11 @@ namespace Shashki
             _gamePanel.SetActive(true);
 
             _playerSkipMovesDic = new Dictionary<PieceOwner, int>()
+            {
+                { PieceOwner.Player, 0 },
+                { PieceOwner.Opponent, 0 },
+            };
+            _playersPoints = new Dictionary<PieceOwner, int>()
             {
                 { PieceOwner.Player, 0 },
                 { PieceOwner.Opponent, 0 },
@@ -134,7 +138,7 @@ namespace Shashki
 
             for (int i = 0; i < playerPieces.Count; i++)
             {
-                if (playerPieces[i].GetPossibleMoves(_board).Count > 0)
+                if (playerPieces[i].GetPossibleMoves(_board, true).Count > 0)
                     playerHasMoves = true;
             }
             
@@ -142,7 +146,7 @@ namespace Shashki
                 
             for (int i = 0; i < opponentPieces.Count; i++)
             {
-                if (opponentPieces[i].GetPossibleMoves(_board).Count > 0)
+                if (opponentPieces[i].GetPossibleMoves(_board, true).Count > 0)
                     opponentHasMoves = true;
             }
             
@@ -376,7 +380,7 @@ namespace Shashki
 
         private void CheckForKingPromotion(PieceView piece)
         {
-            if (!piece.IsKing &&
+            if (!piece.IsTotalKing && 
                 ((piece.Owner == PieceOwner.Player && piece.Row == 0) ||
                  (piece.Owner == PieceOwner.Opponent && piece.Row == _board.Rows - 1)))
             {
@@ -407,7 +411,7 @@ namespace Shashki
                     p.SetShield(false);
                 }
                   
-                var moves = p.GetPossibleMoves(_board);
+                var moves = p.GetPossibleMoves(_board, true);
                 if (moves.Any())
                     hasMove = true;
             }

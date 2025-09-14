@@ -117,7 +117,7 @@ namespace Shashki
                     }
 
                     // Превращение в дамку
-                    if (!piece.IsKing &&
+                    if (!piece.IsTotalKing &&
                         ((piece.Owner == PieceOwner.Player && target.Row == 0) ||
                          (piece.Owner == PieceOwner.Opponent && target.Row == _board.Rows - 1)))
                     {
