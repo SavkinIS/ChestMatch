@@ -16,6 +16,7 @@ namespace Shashki
         private Dictionary<PieceOwner, PieceView> _bombPieces;
 
         public event Action<PieceOwner, AbilityBase> OnAbilityAdded;
+        public event Action OnAbilityChanged;
         public GameController GameController => _gameController;
 
         private void Awake()
@@ -55,7 +56,7 @@ namespace Shashki
         public bool ActivateAbility(AbilityType abilityId, GameController gameController)
         {
             PieceOwner owner = _gameController.Owner;
-            
+
             if (!_abilityCounts[owner].ContainsKey(abilityId) || _abilityCounts[owner][abilityId] <= 0)
             {
                 Debug.Log($"[PowerUpManager] Способность {abilityId} недоступна для {owner} (количество: {_abilityCounts[owner].GetValueOrDefault(abilityId)})");
@@ -69,6 +70,12 @@ namespace Shashki
                 return false;
             }
 
+            if (_selectedAbilities.TryGetValue(owner, out var selectedAbility) && selectedAbility == ability)
+            {
+                _selectedAbilities[owner] = null;
+                return false;
+            }
+            
             _selectedAbilities[owner] = ability;
             gameController.SetAbilitySelectionMode(true, abilityId);
             Debug.Log($"[PowerUpManager] Активирована способность {ability.DisplayName} для {owner}, ждём выбора шашки");
@@ -89,10 +96,16 @@ namespace Shashki
             ability.Apply(piece, this);
             if (ability.Id != AbilityType.SwapSides)
             {
-                _abilityCounts[owner][ability.Id]--;
-                _selectedAbilities[owner] = null;
+                DecreaseAbility(owner, ability.Id);
             }
             Debug.Log($"[PowerUpManager] Способность {ability.DisplayName} применена к шашке ({piece.Row}, {piece.Col}) для {piece.Owner}, осталось: {_abilityCounts[piece.Owner][ability.Id]}");
+        }
+
+        private void DecreaseAbility(PieceOwner owner, AbilityType ability)
+        {
+            _abilityCounts[owner][ability]--;
+            _selectedAbilities[owner] = null;
+            OnAbilityChanged?.Invoke();
         }
 
         public AbilityBase GetAbilityInstance(AbilityType abilityId)
@@ -128,26 +141,9 @@ namespace Shashki
         {
             if (_abilityCounts[owner].ContainsKey(abilityId))
             {
-                _abilityCounts[owner][abilityId]--;
-                _selectedAbilities[owner] = null;
+                DecreaseAbility(owner, abilityId);
                 Debug.Log($"[PowerUpManager] Способность {abilityId} для {owner} потреблена, осталось: {_abilityCounts[owner][abilityId]}");
             }
-        }
-
-        private void Update()
-        {
-            if (Input.GetKeyDown(KeyCode.Keypad1))
-                BuyAbility(PieceOwner.Player, AbilityType.BombKamikaze);
-            if (Input.GetKeyDown(KeyCode.Keypad2))
-                BuyAbility(PieceOwner.Opponent, AbilityType.BombKamikaze);
-            if (Input.GetKeyDown(KeyCode.Keypad3))
-                BuyAbility(PieceOwner.Player, AbilityType.SwapSides);
-            if (Input.GetKeyDown(KeyCode.Keypad4))
-                BuyAbility(PieceOwner.Opponent, AbilityType.SwapSides);
-            if (Input.GetKeyDown(KeyCode.Keypad5))
-                ActivateAbility(AbilityType.SwapSides, _gameController);
-            if (Input.GetKeyDown(KeyCode.Keypad6))  // НОВОЕ: для Щита
-                ActivateAbility(AbilityType.Shield, _gameController);
         }
 
         public AbilityType GetCurrentAbility()

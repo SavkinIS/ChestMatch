@@ -11,6 +11,9 @@ namespace Shashki
         [SerializeField] private PowerUpManager _powerUpManager; // Ссылка на менеджер
         [SerializeField] private GameController _gameController; // Ссылка на контроллер
         [SerializeField] private TMPro.TextMeshProUGUI _countText; // UI текст для количества
+        [SerializeField] private Image _buttonImage;
+        [SerializeField] private Color _buttonColorBase;
+        [SerializeField] private Color _buttonColorActive;
 
         private Button _button;
         private PieceOwner _currentOwner;
@@ -19,13 +22,22 @@ namespace Shashki
         {
             _button = GetComponent<Button>();
             _button.onClick.AddListener(OnButtonClick);
+            _buttonImage = gameObject.GetComponent<Image>();
+            _buttonImage.color = _buttonColorBase;
         }
 
         private void Start()
         {
             UpdateButtonState();
             _powerUpManager.OnAbilityAdded += OnAbilityAdded;
+            _powerUpManager.OnAbilityChanged += OnAbilityChanged;
             _gameController.OnTurnEnd += OnTurnEnd;
+        }
+
+        private void OnAbilityChanged()
+        {
+            _buttonImage.color = _buttonColorBase;
+            UpdateButtonState();
         }
 
         private void OnTurnEnd()
@@ -48,10 +60,12 @@ namespace Shashki
             if (_powerUpManager.ActivateAbility(_abilityType, _gameController))
             {
                 Debug.Log($"[AbilityButton] Кнопка активировала способность {_abilityType}");
+                _buttonImage.color = _buttonColorActive;
                 UpdateButtonState();
             }
             else
             {
+                _buttonImage.color = _buttonColorBase;
                 Debug.Log($"[AbilityButton] Нельзя активировать {_abilityType}: недостаточно единиц");
             }
         }
