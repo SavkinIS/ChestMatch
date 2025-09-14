@@ -395,13 +395,18 @@ namespace Shashki
             for (var index = 0; index < allPieces.Count; index++)
             {
                 var p = allPieces[index];
-                p.SetShield(false);
+                
                 p.SetTempKing(false);
-                
+
                 if (p.Owner != _currentPlayer)
+                {
                     p.SetFrozen(false);
-                
-                
+                }
+                else 
+                {
+                    p.SetShield(false);
+                }
+                  
                 var moves = p.GetPossibleMoves(_board);
                 if (moves.Any())
                     hasMove = true;

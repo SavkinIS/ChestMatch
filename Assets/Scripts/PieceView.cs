@@ -20,19 +20,29 @@ namespace Shashki
         [SerializeField] private bool _isShielded; // Новое поле: флаг щита
         [SerializeField] private ParticleSystem _highlightEffectAuraBlue;
         [SerializeField] private ParticleSystem _highlightEffectAuraRed;
-
+       
         [SerializeField] private ParticleSystem _highlightEffect;
 
         //[SerializeField] private Material _highlightMat;
         [SerializeField] private Color _blockedColor;
 
-        [Space] [Header("Destroy")] [SerializeField]
-        private ParticleSystem _destroyEffectBlue;
-
+        [Space] [Header("Destroy")] 
+        [SerializeField] private ParticleSystem _destroyEffectBlue;
         [SerializeField] private ParticleSystem _destroyEffectRed;
+        
+        [Space]
+        [Header("Ability")]
+        [SerializeField] private List<SpriteEffectHolder> _abilityIcons;
+        [SerializeField] private SpriteEffectHolder _abilityKing;
+        
+        
         private ParticleSystem _destroyEffect;
         private bool _isFrozen;
         private bool _isTempKing;
+        private bool AbilityIsShow
+            => _isBomb || _isFrozen || _isTempKing || _isShielded;
+        private Dictionary<AbilityType, SpriteEffectHolder> _abilitySpriteDic;
+        private bool _isBomb;
 
         public int Row => _row;
         public int Col => _col;
@@ -54,6 +64,9 @@ namespace Shashki
             _destroyEffect.gameObject.SetActive(false);
             _destroyEffectRed.gameObject.SetActive(false);
             _destroyEffectBlue.gameObject.SetActive(false);
+            
+            _abilitySpriteDic = _abilityIcons.ToDictionary(icon => icon.AbilityType);
+            _abilityKing.gameObject.SetActive(false);
         }
 
         public void SetData(int row, int col, PieceOwner owner, Color color, Color blocked, Material highlightMat)
@@ -102,18 +115,11 @@ namespace Shashki
             }
         }
 
-        public void SetShield(bool shielded)
-        {
-            _isShielded = shielded;
-            Debug.Log($"[PieceView] Щит для шашки ({_row}, {_col}): {_isShielded}");
-            SetBlocked();
-            // TODO: Визуал щита (например, иконка или свечение)
-        }
-
         public void PromoteToKing()
         {
             _isKing = true;
             Debug.Log($"{name} стал дамкой!");
+            CheckIsKing();
             // TODO: визуалка (например, смена спрайта или добавление короны)
         }
 
@@ -121,7 +127,16 @@ namespace Shashki
         {
             _ability = ability;
             Debug.Log($"[PieceView] Шашке ({_row}, {_col}) присвоена способность {ability?.DisplayName}");
+           
             // TODO: визуалка способности (например, иконка или цвет)
+        }
+
+        private void ActivateSprite(AbilityType abilityType)
+        {
+            if (_abilitySpriteDic.TryGetValue(abilityType, out var spriteEffectHolder))
+                spriteEffectHolder.gameObject.SetActive(true);
+
+            CheckIsKing();
         }
 
         public void ExecuteAbility(BoardRoot board, PieceHolder pieceHolder)
@@ -130,6 +145,15 @@ namespace Shashki
             {
                 _ability.Execute(this, board, pieceHolder);
                 _ability = null; // Очищаем способность после выполнения
+                
+            }
+        }
+
+        private void CheckIsKing()
+        {
+            if (_isKing && !AbilityIsShow)
+            {
+                _abilityKing.gameObject.SetActive(true);
             }
         }
 
@@ -389,11 +413,13 @@ namespace Shashki
             if (_isFrozen)
             {
                 SetBlocked();
+                ActivateSprite(AbilityType.Freeze);
             }
             else
             {
                 SetBaseColor();
                 _ability = null;
+                ResetAbility(AbilityType.Freeze);
             }
         }
 
@@ -402,12 +428,42 @@ namespace Shashki
             _isTempKing = isTempKing;
             if (isTempKing)
             {
-                
+                ActivateSprite(AbilityType.TempKing);
             }
             else
             {
                 _ability = null;
+                ResetAbility(AbilityType.TempKing);
             }
         }
+        
+        private void ResetAbility(AbilityType type)
+        {
+            if (_abilitySpriteDic.TryGetValue(type, out var spriteEffectHolder))
+                spriteEffectHolder.gameObject.SetActive(false);
+        }
+
+        public void SetBomb()
+        {
+           _isBomb = true;
+           ActivateSprite(AbilityType.BombKamikaze);
+        }
+        
+        
+        public void SetShield(bool isShielded)
+        {
+            _isShielded = isShielded;
+            if (_isShielded)
+            {
+                Debug.Log($"[PieceView] Щит для шашки ({_row}, {_col}): {_isShielded}");
+                ActivateSprite(AbilityType.Shield);
+            }
+            else
+            {
+                _ability = null;
+                ResetAbility(AbilityType.Shield);
+            }
+        }
+
     }
 }

@@ -137,9 +137,9 @@ namespace Shashki
         private void Update()
         {
             if (Input.GetKeyDown(KeyCode.Keypad1))
-                BuyAbility(PieceOwner.Player, AbilityType.BombKaikaze);
+                BuyAbility(PieceOwner.Player, AbilityType.BombKamikaze);
             if (Input.GetKeyDown(KeyCode.Keypad2))
-                BuyAbility(PieceOwner.Opponent, AbilityType.BombKaikaze);
+                BuyAbility(PieceOwner.Opponent, AbilityType.BombKamikaze);
             if (Input.GetKeyDown(KeyCode.Keypad3))
                 BuyAbility(PieceOwner.Player, AbilityType.SwapSides);
             if (Input.GetKeyDown(KeyCode.Keypad4))

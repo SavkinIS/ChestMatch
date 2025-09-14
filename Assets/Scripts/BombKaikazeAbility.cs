@@ -15,6 +15,7 @@ namespace Shashki
             }
 
             piece.SetAbility(this);
+            piece.SetBomb();
             manager.SetBombPiece(piece); // Назначаем бомбу в менеджер для взрыва в конце хода
             Debug.Log($"[BombKaikazeAbility] Шашка ({piece.Row}, {piece.Col}) помечена как бомба-каикадзе");
         }
@@ -59,7 +60,7 @@ namespace Shashki
         
         public void OnValidate()
         {
-            _id = AbilityType.BombKaikaze;
+            _id = AbilityType.BombKamikaze;
         }
     }
 }

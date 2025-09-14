@@ -5,7 +5,7 @@ namespace Shashki
     public enum AbilityType
     {
         None,
-        BombKaikaze, 
+        BombKamikaze, 
         SwapSides,
         Shield, 
         TempKing,      

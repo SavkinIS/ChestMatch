@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: SwapSidesAbility
   m_EditorClassIdentifier: 
   _displayName: Swap
-  _icon: {fileID: 0}
+  _icon: {fileID: 21300000, guid: 88c4dc666db6442359af1205d623532b, type: 3}
   _description: 

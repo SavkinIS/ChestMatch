@@ -12,8 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 90d867a881b64f5593722874f9719575, type: 3}
   m_Name: BombKaikazeAbility
   m_EditorClassIdentifier: 
-  _id: 1
   _displayName: BOOOM
-  _icon: {fileID: 0}
+  _icon: {fileID: 21300000, guid: 268f654283c184a0298003b54154bb4e, type: 3}
   _description: 
-  _abilityType: 1
