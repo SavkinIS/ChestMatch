@@ -301,6 +301,10 @@ namespace Shashki
                                 || (ability != AbilityType.Freeze &&
                                     clickedPiece.Owner == _currentPlayer))
                             {
+                                
+                                if (clickedPiece.IsShielded)
+                                    break;
+                                    
                                 _powerUpManager.ApplyToPiece(clickedPiece);
                                 SetAbilitySelectionMode(false);
                                 Debug.Log($"[GameController] Способность {ability} применена к шашке ({clickedPiece.Row}, {clickedPiece.Col})");
@@ -320,7 +324,10 @@ namespace Shashki
                         break;
 
                     case GameState.SelectingSwapSecondPiece:
-                        if (clickedPiece != null && clickedPiece.Owner != _currentPlayer && IsAdjacent(_firstSwapPiece, clickedPiece))
+                        if (clickedPiece != null
+                            && clickedPiece.Owner != _currentPlayer 
+                            && IsAdjacent(_firstSwapPiece, clickedPiece)
+                            && !clickedPiece.IsShielded)
                         {
                             var swapAbility = _powerUpManager.GetAbilityInstance(AbilityType.SwapSides) as SwapSidesAbility;
                             if (swapAbility != null)

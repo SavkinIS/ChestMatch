@@ -44,7 +44,7 @@ namespace Shashki
                         continue; // Пропускаем клетки за пределами доски
 
                     var targetPiece = board.GetPieceAt(targetRow, targetCol);
-                    if (targetPiece != null)
+                    if (targetPiece != null && !targetPiece.IsShielded)
                     {
                         pieceHolder.PieceDestory(targetPiece);
                         Debug.Log($"[BombKaikazeAbility] Уничтожена шашка на ({targetRow}, {targetCol})");
