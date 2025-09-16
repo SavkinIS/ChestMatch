@@ -13,6 +13,11 @@ public class BootstrapInstaller : MonoInstaller
         Container.BindInterfacesAndSelfTo<GameplayState>().AsSingle(); 
         Container.BindInterfacesAndSelfTo<PauseState>().AsSingle();
         Container.BindInterfacesAndSelfTo<SettingsState>().AsSingle();
+        
+        Container.BindInterfacesAndSelfTo<GameFlowModel>().AsSingle();
+        Container.BindInterfacesAndSelfTo<SceneLoader>().AsSingle();
+        
+        
 
         // Биндинг для StateMachine остается прежним.
         Container.Bind<StateMachine>().AsSingle();
