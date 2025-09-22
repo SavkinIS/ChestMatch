@@ -5,12 +5,13 @@ using Zenject;
 public class LoadingState : IState, IStateMachineBehavior
 {
     private StateMachine _stateMachine;
-    private IGameFlowModel _gameFlowModel;
-    private ISceneLoader _sceneLoader;
+    private readonly IGameFlowModel _gameFlowModel;
+    private readonly ISceneLoader _sceneLoader;
+    private readonly LoadingCurtain _loadingCurtain;
 
-    public LoadingState(IGameFlowModel gameFlowModel, ISceneLoader sceneLoader)
+    public LoadingState(IGameFlowModel gameFlowModel, ISceneLoader sceneLoader, LoadingCurtain loadingCurtain)
     {
-        
+        _loadingCurtain = loadingCurtain;
         _gameFlowModel = gameFlowModel;
         _sceneLoader = sceneLoader;
     }
@@ -19,7 +20,11 @@ public class LoadingState : IState, IStateMachineBehavior
     {
         Debug.Log($"Enter {GetType()}");
         string sceneToLoad = _gameFlowModel.SceneToLoad;
-        _sceneLoader.LoadScene(sceneToLoad, OnLoadCompleted);
+        _loadingCurtain.Show(() =>
+        {
+            _sceneLoader.LoadScene(sceneToLoad, OnLoadCompleted);
+        });
+        
     }
     
     private void OnLoadCompleted()
@@ -28,6 +33,9 @@ public class LoadingState : IState, IStateMachineBehavior
             _stateMachine.Enter<LobbyState>();
         else
             _stateMachine.Enter<GameplayState>();
+        
+        
+        _loadingCurtain.Hide();
     }
     
     public void Exit()
