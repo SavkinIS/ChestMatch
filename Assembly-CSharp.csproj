@@ -49,6 +49,7 @@
     <Compile Include="Assets/TwoUncleVFX/Common/Script/BulletController.cs" />
     <Compile Include="Assets/Scripts/GameCore/Move.cs" />
     <Compile Include="Assets/TwoUncleVFX/Common/Script/ChangeFX.cs" />
+    <Compile Include="Assets/Scripts/GameCore/AbilityConteiner.cs" />
     <Compile Include="Assets/Scripts/Services/GameFlowModel.cs" />
     <Compile Include="Assets/Scripts/GameCore/BoardCell.cs" />
     <Compile Include="Assets/Scripts/GameCore/SwapSidesAbility.cs" />
