@@ -9,11 +9,15 @@ public class GameplayState : IState, ITickable, IStateMachineBehavior
     private readonly DiContainer _container;
     private GameObject _gameSessionInstance;
     private GameCore _gameCore;
+    private readonly GameFlowModel _gameFlowModel;
+    private readonly AbilityConteiner _abilityConteiner;
 
-    public GameplayState(IUIService uiService, DiContainer container)
+    public GameplayState(IUIService uiService, DiContainer container, GameFlowModel gameFlowModel, AbilityConteiner abilityConteiner)
     {
         _uiService = uiService;
         _container = container;
+        _gameFlowModel = gameFlowModel;
+        _abilityConteiner = abilityConteiner;
     }
     
     public void Exit()
@@ -25,7 +29,6 @@ public class GameplayState : IState, ITickable, IStateMachineBehavior
             _gameCore.OnGameOver -= HandleGameOver;
         }
 
-        // Очищаем, уничтожая весь экземпляр игры.
         if (_gameSessionInstance != null)
         {
             Object.Destroy(_gameSessionInstance);
@@ -43,7 +46,7 @@ public class GameplayState : IState, ITickable, IStateMachineBehavior
         if (_gameCore != null)
         {
             var gameplayWindow = _uiService.GetWindow<GameplayWindow>(WindowId.Gameplay);
-            _gameCore.Init(gameplayWindow);
+            _gameCore.Init(gameplayWindow, _gameFlowModel, _abilityConteiner);
             _gameCore.OnGameOver += HandleGameOver;
         }
 

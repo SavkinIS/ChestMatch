@@ -1,5 +1,6 @@
 using Shashki;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class GameplayWindow : BaseWindow
 {
@@ -10,11 +11,13 @@ public class GameplayWindow : BaseWindow
     [SerializeField] private AbilityButton _abilityButton;
     [SerializeField] private TurnTransitionPanel _turnPanel;
     [SerializeField] private GameObject _playPanel;
+    [SerializeField] private Button _endTurnButton;
     
     public TimerProgress TimerProgress => _timerProgress;
     public TurnTransitionPanel TransitionPanel => _transitionPanel;
     
     public AbilityButton AbilityButton => _abilityButton;
+    public Button EndTurnButton => _endTurnButton;
 
 
     public void Initialize(PieceOwner pieceOwner)
