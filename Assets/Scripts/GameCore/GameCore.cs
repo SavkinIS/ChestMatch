@@ -44,7 +44,8 @@ namespace Shashki
         private Dictionary<PieceOwner, int> _playerSkipMovesDic;
         private bool _isGameOver;
         private GameplayWindow _gameplayWindow;
-        
+        private BotPlayer _botPlayer;
+
         public PieceOwner Owner => _currentPlayer;
         public event Action OnTurnEnd;
         public event Action<Winner> OnGameOver;
@@ -71,6 +72,20 @@ namespace Shashki
                 { PieceOwner.Player, 0 },
                 { PieceOwner.Opponent, 0 },
             };
+
+            IBotStrategy botStrategy;
+            
+            switch (gameFlowModel.BotDifficulty) 
+            {
+                case BotDifficulty.Medium:
+                    botStrategy = new MediumBotStrategy();
+                    break;
+                default:
+                    botStrategy = new EasyBotStrategy();
+                    break;
+            }
+            
+            _botPlayer = new BotPlayer(botStrategy, this, _board, _pieceHolder, _turnDelay, () => EndTurn());
         }
 
         private void SkipTurn()
@@ -80,7 +95,7 @@ namespace Shashki
 
         private void Update()
         {
-            if (_isGameOver) return; // Останавливаем ввод и таймер при окончании игры
+            if (_isGameOver) return; 
             
             if (!_canTick) return;
                 
@@ -101,12 +116,14 @@ namespace Shashki
                 _gameplayWindow.TimerProgress.SetTimeTxt(_turnTime);
             }
             
-            HandleInput();
+            if (_currentPlayer == PieceOwner.Player)
+            {
+                HandleInput();
+            }
         }
 
         private void EndTurn()
         {
-            
             _currentPlayer = (_currentPlayer == PieceOwner.Player) ? PieceOwner.Opponent : PieceOwner.Player;
             _board.OnTurnEnd();
             _gameplayWindow.TimerProgress.SetTimeTxt(-1);
@@ -119,16 +136,14 @@ namespace Shashki
             _gameplayWindow.SetPlayerTxt($"Текущий игрок {_currentPlayer}");
             StartCoroutine(SwitchTurn());
             
-            CheckGameOver(); // Проверяем условия после смены хода
+            CheckGameOver(); 
         }
 
         private void CheckGameOver()
         {
-            // Получаем шашки для обоих игроков
             var playerPieces = _pieceHolder.GetPieces().Values.Where(p => p.Owner == PieceOwner.Player).ToList();
             var opponentPieces = _pieceHolder.GetPieces().Values.Where(p => p.Owner == PieceOwner.Opponent).ToList();
 
-            // Все шашки съедены
             if (playerPieces.Count == 0)
             {
                 EndGame(Winner.Opponent);
@@ -140,7 +155,6 @@ namespace Shashki
                 return;
             }
 
-            // Проверяем на отсутствие ходов (уже обрабатывается в OnPlayerChanged, но здесь подтвердим)
             bool playerHasMoves = false;
 
             for (int i = 0; i < playerPieces.Count; i++)
@@ -159,13 +173,12 @@ namespace Shashki
             
             if (!playerHasMoves && playerPieces.Count > 0)
             {
-                // Уничтожаем шашки, если заблокированы (как в исходном коде), и проверяем заново
                 Debug.Log("[GameController] Игрок заблокирован — уничтожаем шашки");
                 foreach (var p in playerPieces)
                 {
                     _pieceHolder.PieceDestory(p);
                 }
-                CheckGameOver(); // Рекурсивно проверим после уничтожения
+                CheckGameOver();
                 return;
             }
             if (!opponentHasMoves && opponentPieces.Count > 0)
@@ -183,14 +196,13 @@ namespace Shashki
         private void EndGame(Winner winner)
         {
             _isGameOver = true;
-            _canTick = false; // Останавливаем таймер
+            _canTick = false; 
             Debug.Log($"[GameController] Игра окончена! Победитель: {winner}");
             OnGameOver?.Invoke(winner);
             _gameplayWindow.ActivateEndGamePanel(winner);
 
         }
 
-        // Метод для сдачи (вызвать из UI кнопки)
         public void Surrender(PieceOwner owner)
         {
             if (_isGameOver) return;
@@ -203,6 +215,11 @@ namespace Shashki
             yield return new WaitForSeconds(2);
             _gameplayWindow.TransitionPanel.Hide();
             _canTick = true;
+            
+            if (_currentPlayer == PieceOwner.Opponent && !_isGameOver)
+            {
+                StartCoroutine(_botPlayer.MakeMoveCoroutine());
+            }
         }
 
         public void SetAbilitySelectionMode(bool isSelecting, AbilityType abilityType = AbilityType.None)
@@ -437,7 +454,7 @@ namespace Shashki
                 }
             }
             
-            CheckGameOver(); // Проверяем после возможного уничтожения шашек
+            CheckGameOver();
         }
 
         private void SelectPiece(PieceView piece)

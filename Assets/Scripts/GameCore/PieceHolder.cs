@@ -28,7 +28,6 @@ namespace Shashki
         {
             if (_piecePrefab == null || _board == null) return;
 
-            // Удаляем старые
             foreach (var piece in _pieces)
             {
 #if UNITY_EDITOR
@@ -49,12 +48,10 @@ namespace Shashki
                 if (cell == null) continue;
                 if (!cell.IsDark) continue;
 
-                // Верхние ряды
                 if (cell.Row < _rowsWithPieces)
                 {
                     CreatePiece(cell, _opponentColor, PieceOwner.Opponent, _opponentColorBlock, _opponentHighlightMaterial);
                 }
-                // Нижние ряды
                 else if (cell.Row >= rows - _rowsWithPieces)
                 {
                     CreatePiece(cell, _playerColor, PieceOwner.Player, _playerColorBlock, _playerHighlightMaterial);
@@ -74,14 +71,9 @@ namespace Shashki
             piece.name = $"Piece_{owner}";
             _pieces.Add(piece);
 
-            // Регистрируем в карте BoardRoot
             _board.RegisterPiece(piece, cell.Row, cell.Col);
         }
 
-        /// <summary>
-        /// Попробовать сходить шашкой в target-клетку.
-        /// Возвращает true, если ход выполнен, и out continueCapturing указывает, можно ли продолжить поедание.
-        /// </summary>
         public bool TryMove(PieceView piece, BoardCell target, out bool continueCapturing)
         {
             continueCapturing = false;
@@ -90,14 +82,11 @@ namespace Shashki
             {
                 if (move.To == target)
                 {
-                    // Обновляем карту фигур
                     _board.MovePieceInMap(piece, piece.Row, piece.Col, target.Row, target.Col);
 
-                    // Перемещаем и обновляем данные
                     piece.SetDataAfterMove(target.Row, target.Col);
                     piece.transform.position = target.transform.position + Vector3.back * 0.01f;
 
-                    // Обработка поедания
                     if (move.IsCapture && move.CapturedPieces != null)
                     {
                         foreach (var capturedPiece in move.CapturedPieces)
@@ -107,7 +96,6 @@ namespace Shashki
                         }
                     }
 
-                    // Проверяем дальнейшие поедания
                     var newMoves = piece.GetPossibleMoves(_board);
                     Debug.Log($"[PieceHolder] Новые ходы после поедания для ({piece.Row}, {piece.Col}): {newMoves.Count}, поедания: {newMoves.Count(m => m.IsCapture)}");
                     if (move.IsCapture && newMoves.Exists(m => m.IsCapture))
@@ -116,16 +104,14 @@ namespace Shashki
                         Debug.Log($"[PieceHolder] Возможные поедания: {string.Join(", ", newMoves.Where(m => m.IsCapture).Select(m => $"({m.To.Row}, {m.To.Col})"))}");
                     }
 
-                    // Превращение в дамку
                     if (!piece.IsTotalKing &&
                         ((piece.Owner == PieceOwner.Player && target.Row == 0) ||
                          (piece.Owner == PieceOwner.Opponent && target.Row == _board.Rows - 1)))
                     {
                         piece.PromoteToKing();
-                        continueCapturing = false; // Дамка завершает ход
+                        continueCapturing = false; 
                     }
 
-                    // Выполняем способность, если она есть и нет дальнейших поеданий
                     if (!continueCapturing && piece.Ability != null)
                     {
                         piece.ExecuteAbility(_board, this);
@@ -144,7 +130,6 @@ namespace Shashki
             _pieces.Remove(piece);
             _board.UnregisterPiece(piece.Row, piece.Col);
             piece.DestroyPiece();
-            // Destroy(piece.gameObject);
         }
 
         public Dictionary<(int row, int col), PieceView> GetPieces()
