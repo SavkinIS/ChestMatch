@@ -89,6 +89,11 @@ namespace Shashki
             _cellLookup.TryGetValue((row, col), out var cell);
             return cell;
         }
+        
+        public BoardCell GetCell(float row, float col)
+        {
+            return GetCell((int)row, (int)col);
+        }
 
         public bool IsInside(int row, int col)
         {

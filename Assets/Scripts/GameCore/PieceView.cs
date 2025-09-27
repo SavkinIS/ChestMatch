@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Serialization;
+using Vector2 = System.Numerics.Vector2;
 
 namespace Shashki
 {
@@ -121,7 +122,6 @@ namespace Shashki
             _isKing = true;
             Debug.Log($"{name} стал дамкой!");
             CheckIsKing();
-            // TODO: визуалка (например, смена спрайта или добавление короны)
         }
 
         public void SetAbility(AbilityBase ability)
@@ -129,7 +129,6 @@ namespace Shashki
             _ability = ability;
             Debug.Log($"[PieceView] Шашке ({_row}, {_col}) присвоена способность {ability?.DisplayName}");
            
-            // TODO: визуалка способности (например, иконка или цвет)
         }
 
         private void ActivateSprite(AbilityType abilityType)
@@ -169,13 +168,12 @@ namespace Shashki
             List<Move> moves = new List<Move>();
             List<Move> captureMoves = new List<Move>();
 
-            // Собираем ходы с поеданием (включая цепочки)
             AddCaptureChainMoves(board, Row, Col, new List<PieceView>(), captureMoves);
 
             if (captureMoves.Count > 0)
             {
                 Debug.Log(
-                    $"[PieceView] Найдено {captureMoves.Count} ходов с поеданием для шашки ({Row}, {Col}): {string.Join(", ", captureMoves.Select(m => $"({m.To.Row}, {m.To.Col}) с поеданием {string.Join(", ", m.CapturedPieces.Select(p => $"({p.Row}, {p.Col})"))}"))}");
+                    $"[PieceView] Найдено {captureMoves.Count} ходов с поеданием для шашки ({Row}, {Col}): " + $"{string.Join(", ", captureMoves.Select(m => $"({m.To.X}, {m.To.Y}) с поеданием {string.Join(", ", m.CapturedPieces.Select(p => $"({p.Row}, {p.Col})"))}"))}");
 
                 if (captureMoves.Count > 0)
                     SetBaseColor();
@@ -194,7 +192,7 @@ namespace Shashki
             }
 
             Debug.Log(
-                $"[PieceView] Найдено {moves.Count} обычных ходов для шашки ({Row}, {Col}): {string.Join(", ", moves.Select(m => $"({m.To.Row}, {m.To.Col})"))}");
+                $"[PieceView] Найдено {moves.Count} обычных ходов для шашки ({Row}, {Col}): {string.Join(", ", moves.Select(m => $"({m.To.X}, {m.To.Y})"))}");
 
             if (moves.Count > 0)
                 SetBaseColor();
@@ -211,10 +209,11 @@ namespace Shashki
                 var cell = board.GetCell(row, col);
                 if (cell != null && board.GetPieceAt(row, col) == null)
                 {
+                    var cellFrom = board.GetCell(row, col);
                     moves.Add(new Move
                     {
-                        From = board.GetCell(Row, Col),
-                        To = cell,
+                        From = new Vector2(cellFrom.Row, cellFrom.Col),
+                        To = new Vector2(cell.Row, cell.Col),
                         IsCapture = false
                     });
                 }
@@ -238,10 +237,11 @@ namespace Shashki
                         if (cell == null) break;
                         if (board.GetPieceAt(row, col) != null) break;
 
+                        var cellFrom = board.GetCell(row, col);
                         moves.Add(new Move
                         {
-                            From = board.GetCell(Row, Col),
-                            To = cell,
+                            From = new Vector2(cellFrom.Row, cellFrom.Col),
+                            To = new Vector2(cell.Row, cell.Col),
                             IsCapture = false
                         });
                     }
@@ -277,10 +277,11 @@ namespace Shashki
                         if (canCapture)
                         {
                             var newCaptured = new List<PieceView>(captured) { midPiece };
+                            var cellFrom = board.GetCell(currentRow, currentCol);
                             var move = new Move
                             {
-                                From = board.GetCell(currentRow, currentCol),
-                                To = landCell,
+                                From = new Vector2(cellFrom.Row, cellFrom.Col),
+                                To = new Vector2(landCell.Row, landCell.Col),
                                 IsCapture = true,
                                 CapturedPieces = new List<PieceView>(newCaptured)
                             };
@@ -332,10 +333,11 @@ namespace Shashki
                             if (canCapture)
                             {
                                 var newCaptured = new List<PieceView>(captured) { midPiece };
+                                var cellFrom = board.GetCell(currentRow, currentCol);
                                 var move = new Move
                                 {
-                                    From = board.GetCell(currentRow, currentCol),
-                                    To = landCell,
+                                    From = new Vector2(cellFrom.Row, cellFrom.Col),
+                                    To = new Vector2(landCell.Row, landCell.Col),
                                     IsCapture = true,
                                     CapturedPieces = new List<PieceView>(newCaptured)
                                 };
@@ -361,7 +363,9 @@ namespace Shashki
             var moves = GetPossibleMoves(board);
             foreach (var move in moves)
             {
-                move.To.SetHighlight(highlight);
+                var to = move.To;
+                var cell = board.GetCell((int)to.X, (int)to.Y);
+               cell.SetHighlight(highlight);
             }
         }
 

@@ -80,7 +80,7 @@ namespace Shashki
             var moves = piece.GetPossibleMoves(_board);
             foreach (var move in moves)
             {
-                if (move.To == target)
+                if (move.To.X == target.Row && move.To.Y == target.Col)
                 {
                     _board.MovePieceInMap(piece, piece.Row, piece.Col, target.Row, target.Col);
 
@@ -101,7 +101,7 @@ namespace Shashki
                     if (move.IsCapture && newMoves.Exists(m => m.IsCapture))
                     {
                         continueCapturing = true;
-                        Debug.Log($"[PieceHolder] Возможные поедания: {string.Join(", ", newMoves.Where(m => m.IsCapture).Select(m => $"({m.To.Row}, {m.To.Col})"))}");
+                        Debug.Log($"[PieceHolder] Возможные поедания: {string.Join(", ", newMoves.Where(m => m.IsCapture).Select(m => $"({m.To.X}, {m.To.Y})"))}");
                     }
 
                     if (!piece.IsTotalKing &&

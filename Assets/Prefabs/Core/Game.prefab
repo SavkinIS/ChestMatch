@@ -88,7 +88,6 @@ GameObject:
   m_Component:
   - component: {fileID: 4817837442683155492}
   - component: {fileID: 295310773726050001}
-  - component: {fileID: 2853578873388754846}
   m_Layer: 0
   m_Name: Game
   m_TagString: Untagged
@@ -127,7 +126,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _board: {fileID: 3062927861850470212}
   _pieceHolder: {fileID: 3361427996912240467}
-  _powerUpManager: {fileID: 2853578873388754846}
   _piecesLayer:
     serializedVersion: 2
     m_Bits: 256
@@ -135,26 +133,6 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 128
   _turnDelay: 60
---- !u!114 &2853578873388754846
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1521002576047809348}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3934b03b688346969a24f637cee98aeb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _availableAbilities:
-  - {fileID: 11400000, guid: 754d2e74d7b2146d999f4bf9e2abacfb, type: 2}
-  - {fileID: 11400000, guid: 181f1876fb0ed4d14bf6249468fa4a37, type: 2}
-  - {fileID: 11400000, guid: b012012d71a1f446cb45085d04318549, type: 2}
-  - {fileID: 11400000, guid: 99e3947bf351944e69d75ae3abe02559, type: 2}
-  - {fileID: 11400000, guid: 857b6ccc1a61b43fd8c13b75ab0eb16a, type: 2}
-  - {fileID: 11400000, guid: ba1fc1f45c9b24f7c8c166a9e33c3a56, type: 2}
-  _gameController: {fileID: 295310773726050001}
 --- !u!1 &8019372105530669412
 GameObject:
   m_ObjectHideFlags: 0

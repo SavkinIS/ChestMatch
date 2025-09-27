@@ -35,7 +35,9 @@ namespace Shashki
 
             if (chooseMove.move != null)
             {
-                _pieceHolder.TryMove(chooseMove.piece, chooseMove.move.To, out bool continueCapturing);
+                var to = chooseMove.move.To;
+                var cell = _board.GetCell(to.X, to.Y);
+                _pieceHolder.TryMove(chooseMove.piece, cell, out bool continueCapturing);
                 _moveCompleteAction?.Invoke();
             }
         }
