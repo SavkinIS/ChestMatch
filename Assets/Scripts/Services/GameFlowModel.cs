@@ -6,7 +6,8 @@ using Shashki;
 public enum BotDifficulty
 {
     Easy,
-    Medium
+    Medium,
+    Hard
 }
 
 public interface IGameFlowModel

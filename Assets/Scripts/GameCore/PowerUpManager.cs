@@ -6,12 +6,14 @@ using UnityEngine.Serialization;
 
 namespace Shashki
 {
-    public class PowerUpManager 
+    public class PowerUpManager
     {
         private List<AbilityBase> _availableAbilities;
         private GameCore _gameCore;
-        
-        private Dictionary<PieceOwner, Dictionary<AbilityType, int>> _abilityCounts = new Dictionary<PieceOwner, Dictionary<AbilityType, int>>();
+
+        private Dictionary<PieceOwner, Dictionary<AbilityType, int>> _abilityCounts =
+            new Dictionary<PieceOwner, Dictionary<AbilityType, int>>();
+
         private Dictionary<PieceOwner, AbilityBase> _selectedAbilities;
         private Dictionary<AbilityType, AbilityBase> _availableAbilitiesDic;
         private Dictionary<PieceOwner, PieceView> _bombPieces;
@@ -20,7 +22,8 @@ namespace Shashki
         public event Action OnAbilityChanged;
         public GameCore GameCore => _gameCore;
 
-        public void Init(List<AbilityBase> availableAbilities, GameCore gameCore)
+        public void Init(List<AbilityBase> availableAbilities, GameCore gameCore, AbilityBase abilityPlayer,
+            AbilityBase abilityOpponent)
         {
             _availableAbilities = availableAbilities;
             _gameCore = gameCore;
@@ -30,13 +33,12 @@ namespace Shashki
             _bombPieces = new Dictionary<PieceOwner, PieceView>();
             _availableAbilitiesDic = _availableAbilities.ToDictionary(a => a.Id, a => a);
 
-            foreach (var ability in _availableAbilities)
-            {
-                _abilityCounts[PieceOwner.Player][ability.Id] = 1;
-                _abilityCounts[PieceOwner.Opponent][ability.Id] = 1;
-                Debug.Log($"[PowerUpManager] Инициализирована способность {ability.DisplayName} для {PieceOwner.Player}: {_abilityCounts[PieceOwner.Player][ability.Id]}");
-                Debug.Log($"[PowerUpManager] Инициализирована способность {ability.DisplayName} для {PieceOwner.Opponent}: {_abilityCounts[PieceOwner.Opponent][ability.Id]}");
-            }
+            _abilityCounts[PieceOwner.Player][abilityPlayer.Id] = 1;
+            _abilityCounts[PieceOwner.Opponent][abilityOpponent.Id] = 1;
+            Debug.Log(
+                $"[PowerUpManager] Инициализирована способность {abilityPlayer.DisplayName} для {PieceOwner.Player}: {_abilityCounts[PieceOwner.Player][abilityPlayer.Id]}");
+            Debug.Log(
+                $"[PowerUpManager] Инициализирована способность {abilityOpponent.DisplayName} для {PieceOwner.Opponent}: {_abilityCounts[PieceOwner.Opponent][abilityOpponent.Id]}");
         }
 
         public bool ActivateAbility(AbilityType abilityId, GameCore gameCore)
@@ -45,7 +47,8 @@ namespace Shashki
 
             if (!_abilityCounts[owner].ContainsKey(abilityId) || _abilityCounts[owner][abilityId] <= 0)
             {
-                Debug.Log($"[PowerUpManager] Способность {abilityId} недоступна для {owner} (количество: {_abilityCounts[owner].GetValueOrDefault(abilityId)})");
+                Debug.Log(
+                    $"[PowerUpManager] Способность {abilityId} недоступна для {owner} (количество: {_abilityCounts[owner].GetValueOrDefault(abilityId)})");
                 return false;
             }
 
@@ -61,20 +64,22 @@ namespace Shashki
                 _selectedAbilities[owner] = null;
                 return false;
             }
-            
+
             _selectedAbilities[owner] = ability;
             gameCore.SetAbilitySelectionMode(true, abilityId);
-            Debug.Log($"[PowerUpManager] Активирована способность {ability.DisplayName} для {owner}, ждём выбора шашки");
+            Debug.Log(
+                $"[PowerUpManager] Активирована способность {ability.DisplayName} для {owner}, ждём выбора шашки");
             return true;
         }
 
         public void ApplyToPiece(PieceView piece)
         {
             PieceOwner owner = _gameCore.Owner;
-            
+
             if (piece == null || !_selectedAbilities.ContainsKey(owner) || _selectedAbilities[owner] == null)
             {
-                Debug.LogWarning($"[PowerUpManager] Нельзя применить способность: нет выбранной способности или шашки для {owner}");
+                Debug.LogWarning(
+                    $"[PowerUpManager] Нельзя применить способность: нет выбранной способности или шашки для {owner}");
                 return;
             }
 
@@ -84,7 +89,9 @@ namespace Shashki
             {
                 DecreaseAbility(owner, ability.Id);
             }
-            Debug.Log($"[PowerUpManager] Способность {ability.DisplayName} применена к шашке ({piece.Row}, {piece.Col}) для {piece.Owner}, осталось: {_abilityCounts[piece.Owner][ability.Id]}");
+
+            Debug.Log(
+                $"[PowerUpManager] Способность {ability.DisplayName} применена к шашке ({piece.Row}, {piece.Col}) для {piece.Owner}, осталось: {_abilityCounts[piece.Owner][ability.Id]}");
         }
 
         private void DecreaseAbility(PieceOwner owner, AbilityType ability)
@@ -107,7 +114,8 @@ namespace Shashki
         public void SetBombPiece(PieceView piece)
         {
             _bombPieces[piece.Owner] = piece;
-            Debug.Log($"[PowerUpManager] Назначена бомба-каикадзе на шашку ({piece.Row}, {piece.Col}) для {piece.Owner}");
+            Debug.Log(
+                $"[PowerUpManager] Назначена бомба-каикадзе на шашку ({piece.Row}, {piece.Col}) для {piece.Owner}");
         }
 
         public void ExecuteBombExplosion(PieceOwner owner, BoardRoot board, PieceHolder pieceHolder)
@@ -128,13 +136,44 @@ namespace Shashki
             if (_abilityCounts[owner].ContainsKey(abilityId))
             {
                 DecreaseAbility(owner, abilityId);
-                Debug.Log($"[PowerUpManager] Способность {abilityId} для {owner} потреблена, осталось: {_abilityCounts[owner][abilityId]}");
+                Debug.Log(
+                    $"[PowerUpManager] Способность {abilityId} для {owner} потреблена, осталось: {_abilityCounts[owner][abilityId]}");
             }
         }
 
         public AbilityType GetCurrentAbility()
         {
             return _selectedAbilities[_gameCore.Owner].Id;
+        }
+
+        public bool BotApplyAbility(AbilityType abilityId, PieceView target)
+        {
+            PieceOwner owner = _gameCore.Owner;
+
+            if (!_abilityCounts[owner].ContainsKey(abilityId) || _abilityCounts[owner][abilityId] <= 0)
+            {
+                Debug.Log($"[PowerUpManager] Бот не может применить {abilityId}, способность недоступна для {owner}");
+                return false;
+            }
+
+            var ability = _availableAbilities.Find(a => a.Id == abilityId);
+            if (ability == null || target.IsShielded) return false;
+
+            // Простая проверка: Заморозка применяется к противникам, остальные (пока) к своим
+            bool isTargetValid = (abilityId == AbilityType.Freeze && target.Owner != owner) ||
+                                 (abilityId != AbilityType.Freeze && target.Owner == owner);
+
+            if (!isTargetValid) return false;
+
+            ability.Apply(target, this);
+            if (ability.Id != AbilityType.SwapSides)
+            {
+                DecreaseAbility(owner, abilityId);
+            }
+
+            Debug.Log(
+                $"[PowerUpManager] Бот применил способность {ability.DisplayName} к шашке ({target.Row}, {target.Col})");
+            return true;
         }
     }
 }

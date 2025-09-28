@@ -10,5 +10,6 @@ namespace Shashki
         [SerializeField] private List<AbilityBase> _abilities = new List<AbilityBase>();
         
         public List<AbilityBase> Abilities => _abilities;
+        public AbilityBase GetRandom => _abilities[Random.Range(0, _abilities.Count)];
     }
 }

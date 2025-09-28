@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Shashki;
 using UnityEngine;
 using Zenject;
 
@@ -53,7 +54,9 @@ namespace Shashki
         public void Init(GameplayWindow gameplayWindow, GameFlowModel gameFlowModel, AbilityConteiner abilityConteiner)
         {
             _powerUpManager = new PowerUpManager();
-            _powerUpManager.Init(abilityConteiner.Abilities, this);
+            var botAbility = abilityConteiner.GetRandom;
+            var playerAbility = abilityConteiner.Abilities.Where(a => a.Id == gameFlowModel.AvailableAbilities[0]).FirstOrDefault();
+            _powerUpManager.Init(abilityConteiner.Abilities, this, playerAbility, botAbility);
             _gameplayWindow = gameplayWindow;
             _gameplayWindow.Initialize(_currentPlayer);
             _gameplayWindow.AbilityButton.Initialize(_powerUpManager, this, gameFlowModel.AvailableAbilities[0] );
@@ -74,18 +77,24 @@ namespace Shashki
             };
 
             IBotStrategy botStrategy;
-            
+
+            gameFlowModel.BotDifficulty = BotDifficulty.Hard;
             switch (gameFlowModel.BotDifficulty) 
             {
                 case BotDifficulty.Medium:
                     botStrategy = new MediumBotStrategy();
+                    break;
+                case BotDifficulty.Hard:
+                    var settings = new HardBotStrategySettings();
+                    settings.AbilityType = botAbility.Id;
+                    botStrategy = new HardBotStrategy(settings);
                     break;
                 default:
                     botStrategy = new EasyBotStrategy();
                     break;
             }
             
-            _botPlayer = new BotPlayer(botStrategy, this, _board, _pieceHolder, _turnDelay, () => EndTurn());
+            _botPlayer = new BotPlayer(botStrategy, this, _board, _pieceHolder, _turnDelay, () => EndTurn(), _powerUpManager);
         }
 
         private void SkipTurn()

@@ -13,10 +13,11 @@ namespace Shashki
         private readonly PieceHolder _pieceHolder;
         private readonly float _maxTimer;
         private Action _moveCompleteAction;
+        private readonly PowerUpManager _powerUpManager;
 
 
         public BotPlayer(IBotStrategy strategy, GameCore gameCore, BoardRoot board,
-            PieceHolder pieceHolder, float maxTimer, Action moveCompleteAction)
+            PieceHolder pieceHolder, float maxTimer, Action moveCompleteAction, PowerUpManager powerUpManager) // Добавить параметр
         {
             _strategy = strategy;
             _gameCore = gameCore;
@@ -24,6 +25,7 @@ namespace Shashki
             _pieceHolder = pieceHolder;
             _maxTimer = maxTimer;
             _moveCompleteAction = moveCompleteAction;
+            _powerUpManager = powerUpManager;
         }
 
         public IEnumerator MakeMoveCoroutine()
@@ -31,7 +33,7 @@ namespace Shashki
             float seconds = Random.Range(0.5f, 2f);
             yield return new WaitForSeconds(seconds);
             
-            (Move move, PieceView piece) chooseMove = _strategy.ChooseMove(_board, _pieceHolder);
+            (Move move, PieceView piece) chooseMove = _strategy.ChooseMove(_board, _pieceHolder, _powerUpManager);
 
             if (chooseMove.move != null)
             {
